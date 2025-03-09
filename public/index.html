@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Stryke Contract Rewards</title>
+    <title>Stryke Contract Interface</title>
     <style>
         body { 
             font-family: Arial; 
@@ -65,6 +65,29 @@
             border: 1px solid #444;
             border-top: none;
         }
+        .info-card {
+            background-color: #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .info-card h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+            color: #f3ff69;
+        }
+        .info-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .info-description {
+            color: #aaa;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
         .function-container {
             margin-bottom: 20px;
             padding: 15px;
@@ -95,17 +118,83 @@
             color: #aaa;
             margin-bottom: 10px;
         }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .refresh-button {
+            background-color: #444;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .refresh-button:hover {
+            background-color: #555;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <h1>Stryke Contract Interface</h1>
     
     <div class="tab">
-        <button class="tablinks active" onclick="openTab(event, 'RewardsTab')">Rewards Lookup</button>
+        <button class="tablinks active" onclick="openTab(event, 'MainTab')">Main</button>
+        <button class="tablinks" onclick="openTab(event, 'RewardsTab')">Rewards Lookup</button>
         <button class="tablinks" onclick="openTab(event, 'ReadFunctionsTab')">Read Functions</button>
     </div>
     
-    <div id="RewardsTab" class="tabcontent" style="display: block;">
+    <div id="MainTab" class="tabcontent" style="display: block;">
+        <h2>Contract Dashboard</h2>
+        <button class="refresh-button" onclick="refreshDashboard()">
+            <span id="refresh-icon">↻</span> Refresh Data
+        </button>
+        
+        <div class="dashboard-grid">
+            <div class="info-card">
+                <h3>Current Epoch</h3>
+                <div class="info-description">The current epoch number in the contract</div>
+                <div class="info-value" id="current-epoch">Loading...</div>
+            </div>
+            
+            <div class="info-card">
+                <h3>Genesis Timestamp</h3>
+                <div class="info-description">The genesis timestamp of the contract</div>
+                <div class="info-value" id="genesis-timestamp">Loading...</div>
+                <div id="genesis-date" style="color: #aaa;"></div>
+            </div>
+            
+            <div class="info-card">
+                <h3>Epoch Length</h3>
+                <div class="info-description">The length of each epoch in seconds</div>
+                <div class="info-value" id="epoch-length">Loading...</div>
+                <div id="epoch-length-days" style="color: #aaa;"></div>
+            </div>
+            
+            <div class="info-card">
+                <h3>Total Reward Per Epoch</h3>
+                <div class="info-description">Total rewards distributed each epoch</div>
+                <div class="info-value" id="total-reward">Loading...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="RewardsTab" class="tabcontent">
         <h2>Rewards Lookup</h2>
         <div>
             <select id="poolSelect">
@@ -139,84 +228,12 @@
     <div id="ReadFunctionsTab" class="tabcontent">
         <h2>Contract Read Functions</h2>
         
-        <!-- Simple read functions without parameters -->
-        <div class="function-container">
-            <div class="function-title">Current Epoch</div>
-            <div class="function-description">Returns the current epoch number</div>
-            <button onclick="callContractFunction('epoch', [])">Get Current Epoch</button>
-            <div id="epoch-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Genesis Timestamp</div>
-            <div class="function-description">Returns the genesis timestamp of the contract</div>
-            <button onclick="callContractFunction('genesis', [])">Get Genesis</button>
-            <div id="genesis-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Epoch Length</div>
-            <div class="function-description">Returns the length of each epoch in seconds</div>
-            <button onclick="callContractFunction('EPOCH_LENGTH', [])">Get Epoch Length</button>
-            <div id="EPOCH_LENGTH-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Total Reward Per Epoch</div>
-            <div class="function-description">Returns the total reward distributed per epoch</div>
-            <button onclick="callContractFunction('totalRewardPerEpoch', [])">Get Total Reward Per Epoch</button>
-            <div id="totalRewardPerEpoch-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Total Base Reward Per Epoch</div>
-            <div class="function-description">Returns the total base reward per epoch</div>
-            <button onclick="callContractFunction('totalBaseRewardPerEpoch', [])">Get Total Base Reward Per Epoch</button>
-            <div id="totalBaseRewardPerEpoch-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Total Voteable Reward Per Epoch</div>
-            <div class="function-description">Returns the total voteable reward per epoch</div>
-            <button onclick="callContractFunction('totalVoteableRewardPerEpoch', [])">Get Total Voteable Reward Per Epoch</button>
-            <div id="totalVoteableRewardPerEpoch-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">SYK Token Address</div>
-            <div class="function-description">Returns the address of the SYK token</div>
-            <button onclick="callContractFunction('syk', [])">Get SYK Address</button>
-            <div id="syk-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">xSYK Token Address</div>
-            <div class="function-description">Returns the address of the xSYK token</div>
-            <button onclick="callContractFunction('xSyk', [])">Get xSYK Address</button>
-            <div id="xSyk-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">xSYK Staking Address</div>
-            <div class="function-description">Returns the address of the xSYK staking contract</div>
-            <button onclick="callContractFunction('xSykStaking', [])">Get xSYK Staking Address</button>
-            <div id="xSykStaking-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Authority Address</div>
-            <div class="function-description">Returns the address of the authority contract</div>
-            <button onclick="callContractFunction('authority', [])">Get Authority Address</button>
-            <div id="authority-result" class="result-container hidden"></div>
-        </div>
-        
-        <!-- Functions with parameters -->
         <div class="function-container">
             <div class="function-title">Compute Rewards</div>
-            <div class="function-description">Calculates rewards for a specific pool and epoch</div>
+            <div class="function-description">Calculate rewards for a specific pool and epoch</div>
             <div class="param-container">
                 <label for="computeRewards-poolId">Pool ID:</label>
-                <select id="computeRewards-poolId" style="width: 100%;">
+                <select id="computeRewards-poolId">
                     <option value="">Select a pool...</option>
                     <option value="0x02d1dc927ecebd87407e1a58a6f2d81f0d6c0ade72ac926e865310aa482b893a">PancakeSwap WETH</option>
                     <option value="0x726dd6a67a7c5b399e0e6954596d6b01605ec97e34e75f5547416146ec001a6c">PancakeSwap WBTC</option>
@@ -234,11 +251,39 @@
         </div>
         
         <div class="function-container">
+            <div class="function-title">Current Epoch</div>
+            <div class="function-description">Get the current epoch number</div>
+            <button onclick="callContractFunction('epoch', [])">Get Current Epoch</button>
+            <div id="epoch-result" class="result-container hidden"></div>
+        </div>
+        
+        <div class="function-container">
+            <div class="function-title">Epoch Length</div>
+            <div class="function-description">Get the length of each epoch in seconds</div>
+            <button onclick="callContractFunction('EPOCH_LENGTH', [])">Get Epoch Length</button>
+            <div id="EPOCH_LENGTH-result" class="result-container hidden"></div>
+        </div>
+        
+        <div class="function-container">
+            <div class="function-title">Genesis Timestamp</div>
+            <div class="function-description">Get the genesis timestamp of the contract</div>
+            <button onclick="callContractFunction('genesis', [])">Get Genesis</button>
+            <div id="genesis-result" class="result-container hidden"></div>
+        </div>
+        
+        <div class="function-container">
+            <div class="function-title">Total Reward Per Epoch</div>
+            <div class="function-description">Get the total reward distributed per epoch</div>
+            <button onclick="callContractFunction('totalRewardPerEpoch', [])">Get Total Reward Per Epoch</button>
+            <div id="totalRewardPerEpoch-result" class="result-container hidden"></div>
+        </div>
+        
+        <div class="function-container">
             <div class="function-title">Gauge Info</div>
-            <div class="function-description">Returns information about a specific gauge</div>
+            <div class="function-description">Get information about a specific gauge</div>
             <div class="param-container">
                 <label for="gauges-id">Gauge ID:</label>
-                <select id="gauges-id" style="width: 100%;">
+                <select id="gauges-id">
                     <option value="">Select a pool...</option>
                     <option value="0x02d1dc927ecebd87407e1a58a6f2d81f0d6c0ade72ac926e865310aa482b893a">PancakeSwap WETH</option>
                     <option value="0x726dd6a67a7c5b399e0e6954596d6b01605ec97e34e75f5547416146ec001a6c">PancakeSwap WBTC</option>
@@ -253,7 +298,7 @@
         
         <div class="function-container">
             <div class="function-title">Epoch Finalized Status</div>
-            <div class="function-description">Checks if a specific epoch has been finalized</div>
+            <div class="function-description">Check if a specific epoch has been finalized</div>
             <div class="param-container">
                 <label for="epochFinalized-epoch">Epoch:</label>
                 <input type="number" id="epochFinalized-epoch" placeholder="Enter epoch number" min="0">
@@ -261,75 +306,83 @@
             <button onclick="checkEpochFinalized()">Check If Epoch Finalized</button>
             <div id="epochFinalized-result" class="result-container hidden"></div>
         </div>
-        
-        <div class="function-container">
-            <div class="function-title">Total Reward for Epoch</div>
-            <div class="function-description">Returns the total reward for a specific epoch</div>
-            <div class="param-container">
-                <label for="totalReward-epoch">Epoch:</label>
-                <input type="number" id="totalReward-epoch" placeholder="Enter epoch number" min="0">
-            </div>
-            <button onclick="getTotalRewardForEpoch()">Get Total Reward</button>
-            <div id="totalReward-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Total Base Reward for Epoch</div>
-            <div class="function-description">Returns the total base reward for a specific epoch</div>
-            <div class="param-container">
-                <label for="totalBaseReward-epoch">Epoch:</label>
-                <input type="number" id="totalBaseReward-epoch" placeholder="Enter epoch number" min="0">
-            </div>
-            <button onclick="getTotalBaseRewardForEpoch()">Get Total Base Reward</button>
-            <div id="totalBaseReward-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Total Voteable Reward for Epoch</div>
-            <div class="function-description">Returns the total voteable reward for a specific epoch</div>
-            <div class="param-container">
-                <label for="totalVoteableReward-epoch">Epoch:</label>
-                <input type="number" id="totalVoteableReward-epoch" placeholder="Enter epoch number" min="0">
-            </div>
-            <button onclick="getTotalVoteableRewardForEpoch()">Get Total Voteable Reward</button>
-            <div id="totalVoteableReward-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Gauge Powers Per Epoch</div>
-            <div class="function-description">Returns the power allocated to a gauge for a specific epoch</div>
-            <div class="param-container">
-                <label for="gaugePowersPerEpoch-epoch">Epoch:</label>
-                <input type="number" id="gaugePowersPerEpoch-epoch" placeholder="Enter epoch number" min="0">
-            </div>
-            <div class="param-container">
-                <label for="gaugePowersPerEpoch-gaugeId">Gauge ID:</label>
-                <select id="gaugePowersPerEpoch-gaugeId" style="width: 100%;">
-                    <option value="">Select a pool...</option>
-                    <option value="0x02d1dc927ecebd87407e1a58a6f2d81f0d6c0ade72ac926e865310aa482b893a">PancakeSwap WETH</option>
-                    <option value="0x726dd6a67a7c5b399e0e6954596d6b01605ec97e34e75f5547416146ec001a6c">PancakeSwap WBTC</option>
-                    <option value="0x74b6b9b1267a0a12d24cfa963f1a3c96aae2f2cd870847cbc9a70c46b7803ae1">OrangeFinance PCS WETH</option>
-                    <option value="0xbb8c79b0fc39426b2cf4bb42501aaa2bdcc7a72f86a564d44a42c6385496618d">OrangeFinance PCS WBTC</option>
-                    <option value="0x36ff4f3050b6a776353d7d160276dcf6b310a658502e226fdd2fa049e6c603dd">OrangeFinance PCS ARB</option>
-                </select>
-            </div>
-            <button onclick="getGaugePowersPerEpoch()">Get Gauge Powers</button>
-            <div id="gaugePowersPerEpoch-result" class="result-container hidden"></div>
-        </div>
-        
-        <div class="function-container">
-            <div class="function-title">Bridge Adapter Status</div>
-            <div class="function-description">Checks if an address is registered as a bridge adapter</div>
-            <div class="param-container">
-                <label for="bridgeAdapters-address">Bridge Adapter Address:</label>
-                <input type="text" id="bridgeAdapters-address" placeholder="Enter bridge adapter address">
-            </div>
-            <button onclick="checkBridgeAdapter()">Check Bridge Adapter</button>
-            <div id="bridgeAdapters-result" class="result-container hidden"></div>
-        </div>
     </div>
 
     <script>
+        // Load dashboard data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshDashboard();
+        });
+        
+        // Function to refresh dashboard data
+        async function refreshDashboard() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            refreshIcon.textContent = '⟳'; // Change to spinning icon
+            
+            try {
+                // Fetch current epoch
+                await fetchDashboardData('epoch', [], 'current-epoch');
+                
+                // Fetch genesis timestamp
+                await fetchDashboardData('genesis', [], 'genesis-timestamp', (value) => {
+                    const timestamp = parseInt(value) * 1000; // Convert to milliseconds
+                    const date = new Date(timestamp);
+                    document.getElementById('genesis-date').textContent = date.toLocaleString();
+                    return value;
+                });
+                
+                // Fetch epoch length
+                await fetchDashboardData('EPOCH_LENGTH', [], 'epoch-length', (value) => {
+                    const seconds = parseInt(value);
+                    const days = (seconds / 86400).toFixed(2);
+                    document.getElementById('epoch-length-days').textContent = `${days} days`;
+                    return value;
+                });
+                
+                // Fetch total reward per epoch
+                await fetchDashboardData('totalRewardPerEpoch', [], 'total-reward', (value) => {
+                    // Format large numbers (divide by 1e18 if appropriate)
+                    if (!isNaN(value) && value.length > 10) {
+                        const bigNumber = BigInt(value);
+                        const formatted = Number(bigNumber) / 1e18;
+                        return `${formatted.toFixed(6)} (divided by 1e18)`;
+                    }
+                    return value;
+                });
+            } catch (error) {
+                console.error('Error refreshing dashboard:', error);
+            } finally {
+                refreshIcon.textContent = '↻';
+            }
+        }
+        
+        // Helper function to fetch dashboard data
+        async function fetchDashboardData(functionName, params, elementId, formatter = null) {
+            try {
+                const response = await fetch('/api/contract-call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ functionName, params })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let displayValue = data.result;
+                    
+                    if (formatter) {
+                        displayValue = formatter(displayValue);
+                    }
+                    
+                    document.getElementById(elementId).textContent = displayValue;
+                } else {
+                    document.getElementById(elementId).textContent = 'Error: ' + data.error;
+                }
+            } catch (error) {
+                document.getElementById(elementId).textContent = 'Error: ' + error.message;
+            }
+        }
+        
         // Function to open tabs
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
@@ -432,72 +485,6 @@
             }
             
             await callContractFunction('epochFinalized', [epoch]);
-        }
-        
-        // Function to get total reward for epoch
-        async function getTotalRewardForEpoch() {
-            const epoch = document.getElementById('totalReward-epoch').value;
-            
-            if (!epoch && epoch !== '0') {
-                alert('Please enter an epoch number');
-                return;
-            }
-            
-            await callContractFunction('totalReward', [epoch]);
-        }
-        
-        // Function to get total base reward for epoch
-        async function getTotalBaseRewardForEpoch() {
-            const epoch = document.getElementById('totalBaseReward-epoch').value;
-            
-            if (!epoch && epoch !== '0') {
-                alert('Please enter an epoch number');
-                return;
-            }
-            
-            await callContractFunction('totalBaseReward', [epoch]);
-        }
-        
-        // Function to get total voteable reward for epoch
-        async function getTotalVoteableRewardForEpoch() {
-            const epoch = document.getElementById('totalVoteableReward-epoch').value;
-            
-            if (!epoch && epoch !== '0') {
-                alert('Please enter an epoch number');
-                return;
-            }
-            
-            await callContractFunction('totalVoteableReward', [epoch]);
-        }
-        
-        // Function to get gauge powers per epoch
-        async function getGaugePowersPerEpoch() {
-            const epoch = document.getElementById('gaugePowersPerEpoch-epoch').value;
-            const gaugeId = document.getElementById('gaugePowersPerEpoch-gaugeId').value;
-            
-            if (!epoch && epoch !== '0') {
-                alert('Please enter an epoch number');
-                return;
-            }
-            
-            if (!gaugeId) {
-                alert('Please select a gauge ID');
-                return;
-            }
-            
-            await callContractFunction('gaugePowersPerEpoch', [epoch, gaugeId]);
-        }
-        
-        // Function to check bridge adapter status
-        async function checkBridgeAdapter() {
-            const address = document.getElementById('bridgeAdapters-address').value;
-            
-            if (!address) {
-                alert('Please enter a bridge adapter address');
-                return;
-            }
-            
-            await callContractFunction('bridgeAdapters', [address]);
         }
         
         // Original rewards lookup function
