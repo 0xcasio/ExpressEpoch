@@ -345,7 +345,7 @@
                     if (!isNaN(value) && value.length > 10) {
                         const bigNumber = BigInt(value);
                         const formatted = Number(bigNumber) / 1e18;
-                        return `${formatted.toFixed(6)} (divided by 1e18)`;
+                        return `${formatted.toFixed(6)}`;
                     }
                     return value;
                 });
