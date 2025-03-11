@@ -10,7 +10,7 @@ body {
 /* Base styles for form elements */
 select, input, button { 
     padding: 12px; 
-    margin: 8px 0; 
+    margin: 0px 0; 
     width: 100%;
     background: #333;
     color: #fff;
