@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Stryke Contract Interface</h1>
+    <h1>Stryke Rewards Gauges Interface</h1>
     
     <div class="tab">
         <button class="tablinks active" onclick="openTab(event, 'MainTab')">Main</button>
@@ -24,28 +24,32 @@
         <div class="dashboard-grid">
             <div class="info-card">
                 <h3>Current Epoch</h3>
-                <div class="info-description">The current epoch number in the contract</div>
                 <div class="info-value" id="current-epoch">Loading...</div>
-            </div>
-            
-            <div class="info-card">
-                <h3>Genesis Timestamp</h3>
-                <div class="info-description">The genesis timestamp of the contract</div>
-                <div class="info-value" id="genesis-timestamp">Loading...</div>
-                <div id="genesis-date" style="color: #aaa;"></div>
-            </div>
-            
-            <div class="info-card">
-                <h3>Epoch Length</h3>
-                <div class="info-description">The length of each epoch in seconds</div>
-                <div class="info-value" id="epoch-length">Loading...</div>
-                <div id="epoch-length-days" style="color: #aaa;"></div>
+                <div class="info-description">The current epoch number users are voting for the gauge rewards</div>
             </div>
             
             <div class="info-card">
                 <h3>Total Reward Per Epoch</h3>
-                <div class="info-description">Total rewards distributed each epoch</div>
                 <div class="info-value" id="total-reward">Loading...</div>
+                <div class="info-description">Total Syk rewards distributed each epoch</div>
+            </div>
+            
+            <div class="info-card" style="grid-column: 1 / -1;">
+                <h3>Previous Epoch Rewards (Epoch <span id="previous-epoch-number">...</span>)</h3>
+                <div class="info-description">Rewards distribution for all pools in the previous epoch</div>
+                <div id="previous-epoch-rewards-loading">Loading rewards data...</div>
+                <div id="previous-epoch-rewards-error" class="hidden" style="color: #ff6969;"></div>
+                <div id="previous-epoch-rewards-table" class="hidden">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pool</th>
+                                <th>Syk Total Rewards</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previous-epoch-rewards-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -73,7 +77,7 @@
                 <thead>
                     <tr>
                         <th>Pool</th>
-                        <th>Rewards</th>
+                        <th>SykRewards</th>
                     </tr>
                 </thead>
                 <tbody id="resultsBody"></tbody>
@@ -170,30 +174,92 @@
             refreshDashboard();
         });
         
+        // Function to fetch previous epoch rewards
+        async function fetchPreviousEpochRewards() {
+            try {
+                // Get the current epoch
+                const response = await fetch('/api/contract-call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ functionName: 'epoch', params: [] })
+                });
+                
+                const epochData = await response.json();
+                
+                if (!epochData.success) {
+                    throw new Error(epochData.error || 'Failed to fetch current epoch');
+                }
+                
+                const currentEpoch = parseInt(epochData.result);
+                const previousEpoch = currentEpoch > 0 ? currentEpoch - 1 : 0;
+                
+                // Update the previous epoch number in the UI
+                document.getElementById('previous-epoch-number').textContent = previousEpoch;
+                
+                // Handle case when we're in the first epoch
+                if (previousEpoch === 0 && currentEpoch === 0) {
+                    document.getElementById('previous-epoch-rewards-loading').classList.add('hidden');
+                    document.getElementById('previous-epoch-rewards-error').classList.remove('hidden');
+                    document.getElementById('previous-epoch-rewards-error').textContent = 'No previous epoch data available yet';
+                    return;
+                }
+                
+                // Fetch rewards for all pools for the previous epoch
+                const rewardsResponse = await fetch('/api/all-pools', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ epoch: previousEpoch.toString() })
+                });
+                
+                const rewardsData = await rewardsResponse.json();
+                
+                if (!rewardsData.success) {
+                    throw new Error(rewardsData.error || 'Failed to fetch rewards data');
+                }
+                
+                // Display the results in the table
+                const tbody = document.getElementById('previous-epoch-rewards-body');
+                tbody.innerHTML = '';
+                
+                rewardsData.results.forEach(result => {
+                    const row = document.createElement('tr');
+                    
+                    const poolCell = document.createElement('td');
+                    poolCell.textContent = result.poolName;
+                    row.appendChild(poolCell);
+                    
+                    const rewardCell = document.createElement('td');
+                    rewardCell.textContent = result.formattedValue;
+                    row.appendChild(rewardCell);
+                    
+                    tbody.appendChild(row);
+                });
+                
+                // Show the table, hide the loading indicator
+                document.getElementById('previous-epoch-rewards-loading').classList.add('hidden');
+                document.getElementById('previous-epoch-rewards-table').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error fetching previous epoch rewards:', error);
+                document.getElementById('previous-epoch-rewards-loading').classList.add('hidden');
+                document.getElementById('previous-epoch-rewards-error').classList.remove('hidden');
+                document.getElementById('previous-epoch-rewards-error').textContent = 'Error: ' + error.message;
+            }
+        }
+        
         // Function to refresh dashboard data
         async function refreshDashboard() {
             const refreshIcon = document.getElementById('refresh-icon');
             refreshIcon.textContent = '⟳'; // Change to spinning icon
             
             try {
+                // Reset states
+                document.getElementById('previous-epoch-rewards-loading').classList.remove('hidden');
+                document.getElementById('previous-epoch-rewards-table').classList.add('hidden');
+                document.getElementById('previous-epoch-rewards-error').classList.add('hidden');
+                
                 // Fetch current epoch
                 await fetchDashboardData('epoch', [], 'current-epoch');
-                
-                // Fetch genesis timestamp
-                await fetchDashboardData('genesis', [], 'genesis-timestamp', (value) => {
-                    const timestamp = parseInt(value) * 1000; // Convert to milliseconds
-                    const date = new Date(timestamp);
-                    document.getElementById('genesis-date').textContent = date.toLocaleString();
-                    return value;
-                });
-                
-                // Fetch epoch length
-                await fetchDashboardData('EPOCH_LENGTH', [], 'epoch-length', (value) => {
-                    const seconds = parseInt(value);
-                    const days = (seconds / 86400).toFixed(2);
-                    document.getElementById('epoch-length-days').textContent = `${days} days`;
-                    return value;
-                });
                 
                 // Fetch total reward per epoch
                 await fetchDashboardData('totalRewardPerEpoch', [], 'total-reward', (value) => {
@@ -205,6 +271,10 @@
                     }
                     return value;
                 });
+                
+                // Fetch and display previous epoch rewards
+                await fetchPreviousEpochRewards();
+                
             } catch (error) {
                 console.error('Error refreshing dashboard:', error);
             } finally {
