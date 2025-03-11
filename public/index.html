@@ -16,7 +16,7 @@
     </div>
     
     <div id="MainTab" class="tabcontent" style="display: block;">
-        <h2>Contract Dashboard</h2>
+        <h2>Dashboard</h2>
         <button class="refresh-button" onclick="refreshDashboard()">
             <span id="refresh-icon">↻</span> Refresh Data
         </button>
@@ -201,7 +201,7 @@
                     if (!isNaN(value) && value.length > 10) {
                         const bigNumber = BigInt(value);
                         const formatted = Number(bigNumber) / 1e18;
-                        return `${formatted.toFixed(6)}`;
+                        return `${formatted.toFixed(2)}`;
                     }
                     return value;
                 });
