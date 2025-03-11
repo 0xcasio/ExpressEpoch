@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Gauge Dashhboard | Stryke</title>
+    <title>Gauge Dashboard | Stryke</title>
+    <!-- Add viewport meta tag for mobile responsiveness -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link href="https://framerusercontent.com/images/7SCSMSdO4duhkMA2s9njqdjBNSg.png" rel="icon" media="(prefers-color-scheme: light)">
     <link href="https://framerusercontent.com/images/7SCSMSdO4duhkMA2s9njqdjBNSg.png" rel="icon" media="(prefers-color-scheme: dark)">
     <link rel="stylesheet" href="styles.css">
@@ -10,9 +12,9 @@
     <h1>Stryke Rewards Gauges Interface</h1>
     
     <div class="tab">
-        <button class="tablinks active" onclick="openTab(event, 'MainTab')">Main</button>
-        <button class="tablinks" onclick="openTab(event, 'RewardsTab')">Rewards Lookup</button>
-        <button class="tablinks" onclick="openTab(event, 'ReadFunctionsTab')">Read Functions</button>
+        <button class="tablinks active" onclick="openTab(event, 'MainTab')">Dashboard</button>
+        <button class="tablinks" onclick="openTab(event, 'RewardsTab')">Rewards</button>
+        <button class="tablinks" onclick="openTab(event, 'ReadFunctionsTab')">Contract</button>
     </div>
     
     <div id="MainTab" class="tabcontent" style="display: block;">
@@ -57,6 +59,7 @@
     <div id="RewardsTab" class="tabcontent">
         <h2>Rewards Lookup</h2>
         <div>
+            <label for="poolSelect">Select Pool:</label>
             <select id="poolSelect">
                 <option value="">Select a pool...</option>
                 <option value="0x02d1dc927ecebd87407e1a58a6f2d81f0d6c0ade72ac926e865310aa482b893a">PancakeSwap WETH</option>
@@ -66,13 +69,18 @@
                 <option value="0x36ff4f3050b6a776353d7d160276dcf6b310a658502e226fdd2fa049e6c603dd">OrangeFinance PCS ARB</option>
                 <option value="all">All Pools</option>
             </select>
+            
+            <label for="epochInput">Epoch Number:</label>
             <input type="number" id="epochInput" placeholder="Enter epoch number" min="0">
+            
             <button onclick="lookupRewards()">Lookup Rewards</button>
         </div>
-        <div id="error" style="color: red; margin-top: 10px;"></div>
-        <div id="loading" class="hidden">Loading...</div>
+        <div id="error" style="color: #ff6969; margin-top: 10px;"></div>
+        <div id="loading" class="hidden">
+            <div class="loading-spinner"></div> Loading...
+        </div>
         <div id="results" class="hidden">
-            <h2>Results</h2>
+            <h3>Results</h3>
             <table>
                 <thead>
                     <tr>
@@ -134,7 +142,7 @@
         <div class="function-container">
             <div class="function-title">Total Reward Per Epoch</div>
             <div class="function-description">Get the total reward distributed per epoch</div>
-            <button onclick="callContractFunction('totalRewardPerEpoch', [])">Get Total Reward Per Epoch</button>
+            <button onclick="callContractFunction('totalRewardPerEpoch', [])">Get Total Reward</button>
             <div id="totalRewardPerEpoch-result" class="result-container hidden"></div>
         </div>
         
@@ -172,7 +180,47 @@
         // Load dashboard data when page loads
         document.addEventListener('DOMContentLoaded', function() {
             refreshDashboard();
+            
+            // Add data attributes to table cells for mobile responsive tables
+            setupMobileTableHeaders();
         });
+        
+        // Setup mobile table headers
+        function setupMobileTableHeaders() {
+            // For results table
+            const resultsThead = document.querySelector('#results table thead');
+            if (resultsThead) {
+                const headers = Array.from(resultsThead.querySelectorAll('th')).map(th => th.textContent.trim());
+                const resultsTbody = document.querySelector('#resultsBody');
+                
+                if (resultsTbody) {
+                    const rows = resultsTbody.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach((cell, i) => {
+                            cell.setAttribute('data-label', headers[i] || '');
+                        });
+                    });
+                }
+            }
+            
+            // For previous epoch rewards table
+            const prevEpochThead = document.querySelector('#previous-epoch-rewards-table table thead');
+            if (prevEpochThead) {
+                const headers = Array.from(prevEpochThead.querySelectorAll('th')).map(th => th.textContent.trim());
+                const prevEpochTbody = document.querySelector('#previous-epoch-rewards-body');
+                
+                if (prevEpochTbody) {
+                    const rows = prevEpochTbody.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        cells.forEach((cell, i) => {
+                            cell.setAttribute('data-label', headers[i] || '');
+                        });
+                    });
+                }
+            }
+        }
         
         // Function to fetch previous epoch rewards
         async function fetchPreviousEpochRewards() {
@@ -226,10 +274,12 @@
                     
                     const poolCell = document.createElement('td');
                     poolCell.textContent = result.poolName;
+                    poolCell.setAttribute('data-label', 'Pool');
                     row.appendChild(poolCell);
                     
                     const rewardCell = document.createElement('td');
                     rewardCell.textContent = result.formattedValue;
+                    rewardCell.setAttribute('data-label', 'Syk Total Rewards');
                     row.appendChild(rewardCell);
                     
                     tbody.appendChild(row);
@@ -413,7 +463,7 @@
             await callContractFunction('epochFinalized', [epoch]);
         }
         
-        // Original rewards lookup function
+        // Function to lookup rewards
         async function lookupRewards() {
             const poolId = document.getElementById('poolSelect').value;
             const epoch = document.getElementById('epochInput').value;
@@ -473,20 +523,32 @@
                 
                 const poolCell = document.createElement('td');
                 poolCell.textContent = result.poolName;
+                poolCell.setAttribute('data-label', 'Pool');
                 row.appendChild(poolCell);
                 
                 const rewardCell = document.createElement('td');
                 rewardCell.textContent = result.formattedValue;
+                rewardCell.setAttribute('data-label', 'SykRewards');
                 row.appendChild(rewardCell);
                 
                 tbody.appendChild(row);
             });
             
             document.getElementById('results').classList.remove('hidden');
+            
+            // Scroll to results on mobile
+            if (window.innerWidth < 768) {
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            }
         }
         
         function showError(message) {
             document.getElementById('error').textContent = message;
+            
+            // Scroll to error on mobile
+            if (window.innerWidth < 768) {
+                document.getElementById('error').scrollIntoView({ behavior: 'smooth' });
+            }
         }
     </script>
 </body>
