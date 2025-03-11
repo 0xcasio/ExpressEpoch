@@ -19,7 +19,7 @@
     
     <div id="MainTab" class="tabcontent" style="display: block;">
         <h2>Dashboard</h2>
-        <button class="refresh-button" onclick="refreshDashboard()">
+        <button class="refresh-button" onclick="refreshDashboardWithCountdown()">
             <span id="refresh-icon">↻</span> Refresh Data
         </button>
         
@@ -34,6 +34,15 @@
                 <h3>Total Reward Per Epoch</h3>
                 <div class="info-value" id="total-reward">Loading...</div>
                 <div class="info-description">Total Syk rewards distributed each epoch</div>
+            </div>
+            
+            <div class="info-card epoch-countdown-card">
+                <h3>Current Epoch Ends In</h3>
+                <div class="info-value" id="epoch-countdown-display">Calculating...</div>
+                <div class="progress-container">
+                    <div class="progress-bar" id="epoch-progress-bar"></div>
+                </div>
+                <div class="info-description">Time remaining until current epoch ends</div>
             </div>
             
             <div class="info-card" style="grid-column: 1 / -1;">
@@ -179,11 +188,121 @@
     <script>
         // Load dashboard data when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            refreshDashboard();
+            refreshDashboardWithCountdown();
             
             // Add data attributes to table cells for mobile responsive tables
             setupMobileTableHeaders();
         });
+        
+        // Global variables for epoch countdown
+        window.epochLengthMs = 604800000; // 7 days in milliseconds
+        window.countdownInterval = null;
+        
+        // Function to initialize the epoch countdown
+        async function initEpochCountdown() {
+            try {
+                // Fetch the required data from the contract
+                const [epochLengthResult, genesisResult, currentEpochResult] = await Promise.all([
+                    fetchContractData('EPOCH_LENGTH', []),
+                    fetchContractData('genesis', []),
+                    fetchContractData('epoch', [])
+                ]);
+
+                // Parse the results
+                const epochLength = BigInt(epochLengthResult);
+                const genesis = BigInt(genesisResult);
+                const currentEpoch = BigInt(currentEpochResult);
+
+                // Calculate when the current epoch ends
+                const currentEpochEndTime = Number(genesis + ((currentEpoch + 1n) * epochLength)) * 1000; // Convert to milliseconds
+
+                // Store epochLength globally for the progress bar
+                window.epochLengthMs = Number(epochLength) * 1000;
+                
+                // Set up the countdown timer
+                updateCountdown(currentEpochEndTime);
+                
+                // Update the countdown every second
+                if (window.countdownInterval) {
+                    clearInterval(window.countdownInterval);
+                }
+                
+                window.countdownInterval = setInterval(() => {
+                    updateCountdown(currentEpochEndTime);
+                }, 1000);
+                
+                // Log calculation details for debugging
+                console.log("Epoch calculation:", {
+                    epochLength: epochLength.toString() + " seconds",
+                    genesis: new Date(Number(genesis) * 1000).toLocaleString(),
+                    currentEpoch: currentEpoch.toString(),
+                    endTime: new Date(currentEpochEndTime).toLocaleString()
+                });
+                
+            } catch (error) {
+                console.error('Error initializing epoch countdown:', error);
+                document.getElementById('epoch-countdown-display').innerHTML = 'Error loading countdown.';
+            }
+        }
+
+        // Function to update the countdown display
+        function updateCountdown(endTime) {
+            const now = Date.now();
+            const timeRemaining = endTime - now;
+            
+            if (timeRemaining <= 0) {
+                // If the epoch has ended, display a message and refresh the data
+                document.getElementById('epoch-countdown-display').innerHTML = 'Epoch has ended! Refreshing...';
+                setTimeout(() => {
+                    refreshDashboardWithCountdown();
+                }, 3000);
+                return;
+            }
+            
+            // Calculate days, hours, minutes, and seconds
+            const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+            
+            // Format the countdown display
+            const countdownDisplay = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+            document.getElementById('epoch-countdown-display').innerHTML = countdownDisplay;
+            
+            // Update the progress bar
+            updateProgressBar(endTime);
+        }
+
+        // Function to update the progress bar
+        function updateProgressBar(endTime) {
+            const now = Date.now();
+            const epochLengthMs = window.epochLengthMs;
+            const startTime = endTime - epochLengthMs;
+            const elapsed = now - startTime;
+            const percentage = Math.min(100, Math.max(0, (elapsed / epochLengthMs) * 100));
+            
+            const progressBar = document.getElementById('epoch-progress-bar');
+            if (progressBar) {
+                progressBar.style.width = `${percentage}%`;
+            }
+        }
+
+        // Helper function to fetch contract data
+        async function fetchContractData(functionName, params) {
+            const response = await fetch('/api/contract-call', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ functionName, params })
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || `Failed to fetch ${functionName}`);
+            }
+            
+            return data.result;
+        }
         
         // Setup mobile table headers
         function setupMobileTableHeaders() {
@@ -297,8 +416,8 @@
             }
         }
         
-        // Function to refresh dashboard data
-        async function refreshDashboard() {
+        // Updated function to refresh dashboard data with countdown
+        async function refreshDashboardWithCountdown() {
             const refreshIcon = document.getElementById('refresh-icon');
             refreshIcon.textContent = '⟳'; // Change to spinning icon
             
@@ -325,11 +444,19 @@
                 // Fetch and display previous epoch rewards
                 await fetchPreviousEpochRewards();
                 
+                // Initialize the countdown
+                await initEpochCountdown();
+                
             } catch (error) {
                 console.error('Error refreshing dashboard:', error);
             } finally {
                 refreshIcon.textContent = '↻';
             }
+        }
+        
+        // Original refreshDashboard function (kept for backward compatibility)
+        async function refreshDashboard() {
+            refreshDashboardWithCountdown();
         }
         
         // Helper function to fetch dashboard data
