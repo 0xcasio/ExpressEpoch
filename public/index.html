@@ -7,6 +7,8 @@
     <link href="https://framerusercontent.com/images/7SCSMSdO4duhkMA2s9njqdjBNSg.png" rel="icon" media="(prefers-color-scheme: light)">
     <link href="https://framerusercontent.com/images/7SCSMSdO4duhkMA2s9njqdjBNSg.png" rel="icon" media="(prefers-color-scheme: dark)">
     <link rel="stylesheet" href="styles.css">
+    <!-- Add Chart.js library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>Stryke Rewards Gauges Interface</h1>
@@ -24,18 +26,19 @@
         </button>
         
         <div class="dashboard-grid">
+            <!-- Current Epoch Card -->
             <div class="info-card">
                 <h3>Current Epoch</h3>
                 <div class="info-value" id="current-epoch">Loading...</div>
                 <div class="info-description">The current epoch number users are voting for the gauge rewards</div>
             </div>
-            
+            <!-- Total Reward Per Epoch Card -->
             <div class="info-card">
                 <h3>Total Reward Per Epoch</h3>
                 <div class="info-value" id="total-reward">Loading...</div>
                 <div class="info-description">Total Syk rewards distributed each epoch</div>
             </div>
-            
+            <!-- Epoch Countdown Card -->
             <div class="info-card epoch-countdown-card">
                 <h3>Current Epoch Ends In</h3>
                 <div class="info-value" id="epoch-countdown-display">Calculating...</div>
@@ -44,7 +47,7 @@
                 </div>
                 <div class="info-description">Time remaining until current epoch ends</div>
             </div>
-            
+            <!-- Previous Epoch Rewards Card -->
             <div class="info-card" style="grid-column: 1 / -1;">
                 <h3>Previous Epoch Rewards (Epoch <span id="previous-epoch-number">...</span>)</h3>
                 <div class="info-description">Rewards distribution for all pools in the previous epoch</div>
@@ -61,6 +64,14 @@
                         <tbody id="previous-epoch-rewards-body"></tbody>
                     </table>
                 </div>
+            </div>
+            <!-- New Historical Chart Card -->
+            <div class="info-card" style="grid-column: 1 / -1;">
+                <h3>Historical Epoch Rewards Distribution</h3>
+                <div class="info-description">Rewards distribution for all pools across completed epochs</div>
+                <div id="historical-rewards-loading">Loading chart data...</div>
+                <div id="historical-rewards-error" class="hidden" style="color: #ff6969;"></div>
+                <div id="historical-rewards-chart" class="chart-container hidden"></div>
             </div>
         </div>
     </div>
@@ -416,43 +427,46 @@
             }
         }
         
-        // Updated function to refresh dashboard data with countdown
-        async function refreshDashboardWithCountdown() {
-            const refreshIcon = document.getElementById('refresh-icon');
-            refreshIcon.textContent = '⟳'; // Change to spinning icon
-            
-            try {
-                // Reset states
-                document.getElementById('previous-epoch-rewards-loading').classList.remove('hidden');
-                document.getElementById('previous-epoch-rewards-table').classList.add('hidden');
-                document.getElementById('previous-epoch-rewards-error').classList.add('hidden');
-                
-                // Fetch current epoch
-                await fetchDashboardData('epoch', [], 'current-epoch');
-                
-                // Fetch total reward per epoch
-                await fetchDashboardData('totalRewardPerEpoch', [], 'total-reward', (value) => {
-                    // Format large numbers (divide by 1e18 if appropriate)
-                    if (!isNaN(value) && value.length > 10) {
-                        const bigNumber = BigInt(value);
-                        const formatted = Number(bigNumber) / 1e18;
-                        return `${formatted.toFixed(2)}`;
-                    }
-                    return value;
-                });
-                
-                // Fetch and display previous epoch rewards
-                await fetchPreviousEpochRewards();
-                
-                // Initialize the countdown
-                await initEpochCountdown();
-                
-            } catch (error) {
-                console.error('Error refreshing dashboard:', error);
-            } finally {
-                refreshIcon.textContent = '↻';
+        // Updated function to refresh dashboard data with countdown and historical chart
+async function refreshDashboardWithCountdown() {
+    const refreshIcon = document.getElementById('refresh-icon');
+    refreshIcon.textContent = '⟳'; // Change to spinning icon
+    
+    try {
+        // Reset states
+        document.getElementById('previous-epoch-rewards-loading').classList.remove('hidden');
+        document.getElementById('previous-epoch-rewards-table').classList.add('hidden');
+        document.getElementById('previous-epoch-rewards-error').classList.add('hidden');
+        
+        // Fetch current epoch
+        await fetchDashboardData('epoch', [], 'current-epoch');
+        
+        // Fetch total reward per epoch
+        await fetchDashboardData('totalRewardPerEpoch', [], 'total-reward', (value) => {
+            // Format large numbers (divide by 1e18 if appropriate)
+            if (!isNaN(value) && value.length > 10) {
+                const bigNumber = BigInt(value);
+                const formatted = Number(bigNumber) / 1e18;
+                return `${formatted.toFixed(2)}`;
             }
-        }
+            return value;
+        });
+        
+        // Fetch and display previous epoch rewards
+        await fetchPreviousEpochRewards();
+        
+        // Load the historical chart
+        await loadHistoricalRewardsChart();
+        
+        // Initialize the countdown
+        await initEpochCountdown();
+        
+    } catch (error) {
+        console.error('Error refreshing dashboard:', error);
+    } finally {
+        refreshIcon.textContent = '↻';
+    }
+}
         
         // Original refreshDashboard function (kept for backward compatibility)
         async function refreshDashboard() {
@@ -678,5 +692,7 @@
             }
         }
     </script>
+    <!-- Include the historical chart JS file -->
+<script src="historical-chart.js"></script>
 </body>
 </html>
