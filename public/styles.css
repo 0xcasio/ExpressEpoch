@@ -49,6 +49,7 @@ th, td {
     text-align: left;
 }
 
+
 /* On small screens, make tables responsive */
 @media (max-width: 600px) {
     table, thead, tbody, th, td, tr {
@@ -408,3 +409,90 @@ html, body {
         height: 250px;
     }
 }
+
+/* Add these styles at the end of your styles.css file */
+
+/* Position stats container styling */
+.position-stats-container {
+    margin-top: 15px;
+  }
+  
+  .position-stat {
+    margin-bottom: 15px;
+  }
+  
+  .position-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  .position-value {
+    text-align: right;
+    margin-bottom: 5px;
+  }
+  
+  .position-bar-container {
+    background-color: #444;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  
+  .position-bar {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.5s ease;
+  }
+  
+  .long-bar {
+    background-color: #4CAF50; /* Green */
+  }
+  
+  .short-bar {
+    background-color: #F44336; /* Red */
+  }
+  
+  .global-bias {
+    margin-top: 15px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+  }
+  
+  /* Options data table styling */
+  #options-data-table th,
+  #options-data-table td {
+    padding: 12px 8px;
+  }
+  
+  #options-data-table th {
+    background-color: #333;
+    color: #f3ff69;
+  }
+  
+  #options-data-table tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  #options-data-table tr:hover {
+    background-color: rgba(243, 255, 105, 0.1);
+  }
+  
+  /* Make the tab responsive on small screens */
+  @media (max-width: 768px) {
+    .position-stats-container {
+      margin-top: 10px;
+    }
+    
+    .global-bias {
+      font-size: 16px;
+    }
+    
+    #options-data-table th,
+    #options-data-table td {
+      padding: 8px 4px;
+      font-size: 14px;
+    }
+  }

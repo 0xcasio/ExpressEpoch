@@ -1,0 +1,303 @@
+[
+  {
+    "chainId": 42161,
+    "deprecated": false,
+    "pairName": "BOOP-WETH",
+    "ticker": "BOOP/WETH",
+    "address": "0xa23233775ed58669cb0c2c7a6fa0380b6ccc1094",
+    "primePool": "0xe24f62341d84d11078188d83ca3be118193d6389",
+    "feeStrategy": "0xdcb12fCBf30B6824ef852f65D529038fAA1142bD",
+    "tokenURIFetcher": "0x0000000000000000000000000000000000000000",
+    "optionsPricing": "0x74312d32aC6b6Ff052bA605Ec111d36654B11E95",
+    "pools": [
+      {
+        "address": "0xe24f62341d84d11078188d83ca3be118193d6389",
+        "fee": 10000,
+        "handler": "0xdeD9741Cd7B4B8ffc1DbCFEcd84B20D35538FFaf",
+        "name": "uniswap",
+        "tickSpacing": 200
+      }
+    ],
+    "callToken": {
+      "address": "0x13a7dedb7169a17be92b0e3c7c2315b46f4772b3",
+      "decimals": 18,
+      "symbol": "BOOP"
+    },
+    "putToken": {
+      "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "decimals": 18,
+      "symbol": "WETH"
+    },
+    "availableLiquidity": 3.506096260263929,
+    "openInterest": 6.364838860810012e-23,
+    "totalLiquidity": 3.506096260263929,
+    "premiums24h": 0,
+    "volume24h": 0,
+    "protocolFees24h": 0,
+    "isLimitOrdersEnabled": true
+  },
+  {
+    "chainId": 42161,
+    "deprecated": false,
+    "pairName": "WETH-USDC",
+    "ticker": "WETH/USDC",
+    "address": "0xcD697B919AA000378fe429b47eb0fF0D17d3D435",
+    "primePool": "0xc6962004f452be9203591991d15f6b388e09e8d0",
+    "feeStrategy": "0xdcb12fCBf30B6824ef852f65D529038fAA1142bD",
+    "tokenURIFetcher": "0x0000000000000000000000000000000000000000",
+    "optionsPricing": "0x3da8d7Fafd555Efa56801B03d1b669C039F839e1",
+    "pools": [
+      {
+        "address": "0xc6962004f452be9203591991d15f6b388e09e8d0",
+        "fee": 500,
+        "handler": "0xdeD9741Cd7B4B8ffc1DbCFEcd84B20D35538FFaf",
+        "name": "uniswap",
+        "tickSpacing": 10
+      },
+      {
+        "address": "0xf3eb87c1f6020982173c908e7eb31aa66c1f0296",
+        "fee": 500,
+        "handler": "0x36dfa3488E2974f003481fc18388fd6a0741A4Be",
+        "name": "sushiswap",
+        "tickSpacing": 10
+      },
+      {
+        "address": "0xd9e2a1a61b6e61b275cec326465d417e52c1b95c",
+        "fee": 500,
+        "handler": "0x23aD242c41b965DB6343ec4A9890fcF80da1c314",
+        "name": "pancakeswap",
+        "tickSpacing": 10
+      }
+    ],
+    "callToken": {
+      "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "decimals": 18,
+      "symbol": "WETH"
+    },
+    "putToken": {
+      "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "decimals": 6,
+      "symbol": "USDC"
+    },
+    "availableLiquidity": 580740.1763521391,
+    "openInterest": 722.6127845381209,
+    "totalLiquidity": 581462.7891396772,
+    "premiums24h": 4.485559999999999,
+    "volume24h": 579.7646965173184,
+    "protocolFees24h": 0.6728339999999995,
+    "isLimitOrdersEnabled": true
+  },
+  {
+    "chainId": 42161,
+    "deprecated": false,
+    "pairName": "ARB-USDC",
+    "ticker": "ARB/USDC",
+    "address": "0x20b2431557bb90954744a6d404f45ad1ad8719f4",
+    "primePool": "0xb0f6ca40411360c03d41c5ffc5f179b8403cdcf8",
+    "feeStrategy": "0xdcb12fCBf30B6824ef852f65D529038fAA1142bD",
+    "tokenURIFetcher": "0x0000000000000000000000000000000000000000",
+    "optionsPricing": "0xC4bd11A95313bb46173D8a9011046B7cD2FB14F8",
+    "pools": [
+      {
+        "address": "0xb0f6ca40411360c03d41c5ffc5f179b8403cdcf8",
+        "fee": 500,
+        "handler": "0xdeD9741Cd7B4B8ffc1DbCFEcd84B20D35538FFaf",
+        "name": "uniswap",
+        "tickSpacing": 10
+      },
+      {
+        "address": "0xfa1cc0cae7779b214b1112322a2d1cf0b511c3bc",
+        "fee": 500,
+        "handler": "0x36dfa3488E2974f003481fc18388fd6a0741A4Be",
+        "name": "sushiswap",
+        "tickSpacing": 10
+      },
+      {
+        "address": "0x9ffca51d23ac7f7df82da414865ef1055e5afcc3",
+        "fee": 500,
+        "handler": "0x23aD242c41b965DB6343ec4A9890fcF80da1c314",
+        "name": "pancakeswap",
+        "tickSpacing": 10
+      }
+    ],
+    "callToken": {
+      "address": "0x912ce59144191c1204e64559fe8253a0e49e6548",
+      "decimals": 18,
+      "symbol": "ARB"
+    },
+    "putToken": {
+      "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "decimals": 6,
+      "symbol": "USDC"
+    },
+    "availableLiquidity": 70549.03080000632,
+    "openInterest": 0.0001553363417913559,
+    "totalLiquidity": 70549.03095534268,
+    "premiums24h": 0,
+    "volume24h": 0,
+    "protocolFees24h": 0,
+    "isLimitOrdersEnabled": true
+  },
+  {
+    "chainId": 42161,
+    "deprecated": false,
+    "pairName": "WBTC-USDC",
+    "ticker": "WBTC/USDC",
+    "address": "0x502751c59fEb16959526f1f8aa767D84b028bFbD",
+    "primePool": "0x0e4831319a50228b9e450861297ab92dee15b44f",
+    "feeStrategy": "0xdcb12fCBf30B6824ef852f65D529038fAA1142bD",
+    "tokenURIFetcher": "0x0000000000000000000000000000000000000000",
+    "optionsPricing": "0x589363B5AAf50e1AFcd118d6Fc190eFe79b72FAe",
+    "pools": [
+      {
+        "address": "0x0e4831319a50228b9e450861297ab92dee15b44f",
+        "fee": 500,
+        "handler": "0xdeD9741Cd7B4B8ffc1DbCFEcd84B20D35538FFaf",
+        "name": "uniswap",
+        "tickSpacing": 10
+      },
+      {
+        "address": "0x699f628a8a1de0f28cf9181c1f8ed848ebb0bbdf",
+        "fee": 500,
+        "handler": "0x36dfa3488E2974f003481fc18388fd6a0741A4Be",
+        "name": "sushiswap",
+        "tickSpacing": 10
+      },
+      {
+        "address": "0x843ac8dc6d34aeb07a56812b8b36429ee46bdd07",
+        "fee": 500,
+        "handler": "0x23aD242c41b965DB6343ec4A9890fcF80da1c314",
+        "name": "pancakeswap",
+        "tickSpacing": 10
+      }
+    ],
+    "callToken": {
+      "address": "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
+      "decimals": 8,
+      "symbol": "WBTC"
+    },
+    "putToken": {
+      "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "decimals": 6,
+      "symbol": "USDC"
+    },
+    "availableLiquidity": 387394.92573454016,
+    "openInterest": 162878.3783920766,
+    "totalLiquidity": 550273.3364562601,
+    "premiums24h": 866.0810135952371,
+    "volume24h": 146243.19867348133,
+    "protocolFees24h": 129.90372372237073,
+    "isLimitOrdersEnabled": true
+  },
+  {
+    "chainId": 42161,
+    "deprecated": true,
+    "pairName": "WETH-USDC.e",
+    "ticker": "WETH/USDC.e",
+    "address": "0x764fa09d0b3de61eed242099bd9352c1c61d3d27",
+    "primePool": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
+    "feeStrategy": "0xdcb12fCBf30B6824ef852f65D529038fAA1142bD",
+    "tokenURIFetcher": "0x0000000000000000000000000000000000000000",
+    "optionsPricing": "0xb1ef5f36cba3e741f8264bcfacef590686fdfe68",
+    "pools": [
+      {
+        "address": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
+        "fee": 500,
+        "handler": "0x29bbf7ebb9c5146c98851e76a5529985e4052116",
+        "name": "uniswap",
+        "tickSpacing": 10
+      }
+    ],
+    "callToken": {
+      "address": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "decimals": 18,
+      "symbol": "WETH"
+    },
+    "putToken": {
+      "address": "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
+      "decimals": 6,
+      "symbol": "USDC.e"
+    },
+    "availableLiquidity": 0,
+    "openInterest": 0,
+    "totalLiquidity": 0,
+    "premiums24h": 0,
+    "volume24h": 0,
+    "protocolFees24h": 0,
+    "isLimitOrdersEnabled": false
+  },
+  {
+    "chainId": 42161,
+    "deprecated": true,
+    "pairName": "ARB-USDC.e",
+    "ticker": "ARB/USDC.e",
+    "address": "0x77b6f45a3dcf0493f1b9ac9874e5982ab526aa9e",
+    "primePool": "0xcda53b1f66614552f834ceef361a8d12a0b8dad8",
+    "feeStrategy": "0xdcb12fCBf30B6824ef852f65D529038fAA1142bD",
+    "tokenURIFetcher": "0x0000000000000000000000000000000000000000",
+    "optionsPricing": "0xb1ef5f36cba3e741f8264bcfacef590686fdfe68",
+    "pools": [
+      {
+        "address": "0xcda53b1f66614552f834ceef361a8d12a0b8dad8",
+        "fee": 500,
+        "handler": "0xe11d346757d052214686bcbc860c94363afb4a9a",
+        "name": "uniswap",
+        "tickSpacing": 10
+      }
+    ],
+    "callToken": {
+      "address": "0x912ce59144191c1204e64559fe8253a0e49e6548",
+      "decimals": 18,
+      "symbol": "ARB"
+    },
+    "putToken": {
+      "address": "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
+      "decimals": 6,
+      "symbol": "USDC.e"
+    },
+    "availableLiquidity": 0,
+    "openInterest": 0,
+    "totalLiquidity": 0,
+    "premiums24h": 0,
+    "volume24h": 0,
+    "protocolFees24h": 0,
+    "isLimitOrdersEnabled": false
+  },
+  {
+    "chainId": 42161,
+    "deprecated": true,
+    "pairName": "WBTC-USDC.e",
+    "ticker": "WBTC/USDC.e",
+    "address": "0x3808e8c983023a125ffe2714e2a703a3bf02be0d",
+    "primePool": "0xac70bd92f89e6739b3a08db9b6081a923912f73d",
+    "feeStrategy": "0xc808acb06077174333b31ae123c33c6559730035",
+    "tokenURIFetcher": "0x0000000000000000000000000000000000000000",
+    "optionsPricing": "0xb1ef5f36cba3e741f8264bcfacef590686fdfe68",
+    "pools": [
+      {
+        "address": "0xac70bd92f89e6739b3a08db9b6081a923912f73d",
+        "fee": 500,
+        "handler": "0xe11d346757d052214686bcbc860c94363afb4a9a",
+        "name": "uniswap",
+        "tickSpacing": 10
+      }
+    ],
+    "callToken": {
+      "address": "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
+      "decimals": 8,
+      "symbol": "WBTC"
+    },
+    "putToken": {
+      "address": "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
+      "decimals": 6,
+      "symbol": "USDC.e"
+    },
+    "availableLiquidity": 0,
+    "openInterest": 0,
+    "totalLiquidity": 0,
+    "premiums24h": 0,
+    "volume24h": 0,
+    "protocolFees24h": 0,
+    "isLimitOrdersEnabled": false
+  }
+]

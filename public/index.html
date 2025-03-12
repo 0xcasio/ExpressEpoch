@@ -17,6 +17,7 @@
         <button class="tablinks active" onclick="openTab(event, 'MainTab')">Dashboard</button>
         <button class="tablinks" onclick="openTab(event, 'RewardsTab')">Rewards</button>
         <button class="tablinks" onclick="openTab(event, 'ReadFunctionsTab')">Contract</button>
+        <button class="tablinks" onclick="openTab(event, 'OptionsDataTab')">Options Data</button>
     </div>
     
     <div id="MainTab" class="tabcontent" style="display: block;">
@@ -195,6 +196,93 @@
             <div id="epochFinalized-result" class="result-container hidden"></div>
         </div>
     </div>
+    <!-- Add this new tab content div after the existing tabcontent divs -->
+<div id="OptionsDataTab" class="tabcontent">
+    <h2>Options Markets Data</h2>
+    <button class="refresh-button" onclick="fetchOptionsData()">
+        <span>↻</span> Refresh Data
+    </button>
+    
+    <!-- Overview Cards -->
+    <div class="dashboard-grid">
+        <!-- Total Notional Card -->
+        <div class="info-card">
+            <h3>Total Notional</h3>
+            <div class="info-value" id="options-total-notional">Loading...</div>
+            <div class="info-description">Total value in options markets</div>
+        </div>
+        
+        <!-- Total Open Interest Card -->
+        <div class="info-card">
+            <h3>Open Interest</h3>
+            <div class="info-value" id="options-open-interest">Loading...</div>
+            <div class="info-description">Total open interest across all markets</div>
+        </div>
+        
+        <!-- Total Volume Card -->
+        <div class="info-card">
+            <h3>24h Volume</h3>
+            <div class="info-value" id="options-volume">Loading...</div>
+            <div class="info-description">Trading volume in the last 24 hours</div>
+        </div>
+        
+        <!-- Total Liquidity Card -->
+        <div class="info-card">
+            <h3>Total Liquidity</h3>
+            <div class="info-value" id="options-liquidity">Loading...</div>
+            <div class="info-description">Available liquidity across all markets</div>
+        </div>
+    </div>
+    
+    <!-- Position Distribution Card -->
+    <div class="info-card">
+        <h3>Position Distribution</h3>
+        <div class="info-description">Distribution of long vs short positions</div>
+        <div class="position-stats-container">
+            <div class="position-stat">
+                <div class="position-label">Long Positions</div>
+                <div class="position-value" id="options-long-positions">Loading...</div>
+                <div class="position-bar-container">
+                    <div class="position-bar long-bar" id="options-long-bar" style="width: 50%"></div>
+                </div>
+            </div>
+            <div class="position-stat">
+                <div class="position-label">Short Positions</div>
+                <div class="position-value" id="options-short-positions">Loading...</div>
+                <div class="position-bar-container">
+                    <div class="position-bar short-bar" id="options-short-bar" style="width: 50%"></div>
+                </div>
+            </div>
+            <div class="global-bias">
+                <span>Global Bias: </span>
+                <span id="options-global-bias">Loading...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Markets Table Card -->
+    <div class="info-card">
+        <h3>Top Markets</h3>
+        <div class="info-description">Markets with highest trading volume</div>
+        <div id="options-data-loading">Loading market data...</div>
+        <div id="options-data-error" class="hidden" style="color: #ff6969;"></div>
+        <div id="options-data-table-container" class="hidden">
+            <table id="options-data-table">
+                <thead>
+                    <tr>
+                        <th>Market</th>
+                        <th>Open Interest</th>
+                        <th>Total Liquidity</th>
+                        <th>24h Volume</th>
+                    </tr>
+                </thead>
+                <tbody id="options-data-table-body">
+                    <!-- Table rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
     <script>
         // Load dashboard data when page loads
@@ -694,5 +782,7 @@ async function refreshDashboardWithCountdown() {
     </script>
     <!-- Include the historical chart JS file -->
 <script src="historical-chart.js"></script>
+<!-- Add this before the closing </body> tag to include the options data JavaScript -->
+<script src="options-data.js"></script>
 </body>
 </html>
