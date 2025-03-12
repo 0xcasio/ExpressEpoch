@@ -305,9 +305,18 @@ function createOptionsMarketsTable(markets) {
 function processMarketsForTable(markets) {
     // Extract and normalize market data
     const processedMarkets = markets.map(market => {
-        // Get market name
-        const name = market.name || market.symbol || market.pair || 
+        // Get market name - prioritize ticker property
+        const name = market.ticker || market.name || market.symbol || market.pair || 
                      (market.underlying && market.underlying.symbol) || 'Unknown';
+        
+        // Log the market data to see available properties
+        console.log('Processing market:', {
+            ticker: market.ticker,
+            name: market.name,
+            symbol: market.symbol,
+            pair: market.pair,
+            final_name_used: name
+        });
         
         // Get open interest
         let openInterest = 0;
@@ -349,7 +358,6 @@ function processMarketsForTable(markets) {
     // Return top 10 markets
     return processedMarkets.slice(0, 10);
 }
-
 // Function to generate mock market data for testing or fallback
 function generateMockMarkets() {
     return [
