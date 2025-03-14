@@ -18,14 +18,29 @@ A web application for looking up rewards from the Stryke protocol based on epoch
    cd client && npm install
    ```
 3. Create a `.env` file based on `.env.example`
-4. Start the development server:
+4. Start both servers together (recommended):
    ```
+   npm run dev:all
+   ```
+   
+   This will start both the backend server and the frontend development server simultaneously.
+
+   Alternatively, you can start them separately:
+   ```
+   # Terminal 1 - Start the backend
    npm run dev
-   ```
-5. In a separate terminal, start the client:
-   ```
+   
+   # Terminal 2 - Start the frontend
    cd client && npm run dev
    ```
+
+5. Access the application:
+   - Frontend: http://localhost:5173 (or another port as shown in the terminal)
+   - Backend API: http://localhost:3000
+
+## Troubleshooting Local Development
+
+If you see API errors in the console when running only the frontend, make sure the backend server is also running. The frontend needs to communicate with the backend API for contract interactions.
 
 ## Deploying to Vercel
 

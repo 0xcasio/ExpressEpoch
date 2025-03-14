@@ -13,15 +13,16 @@ export default function Layout() {
     <ThemeProvider defaultTheme="dark" forcedTheme="dark">
       <div className="container mx-auto py-10">
         <h1 className="text-4xl font-bold text-center mb-10">
-          Stryke Rewards Gauges Interface
+          Stryke Data Interface
         </h1>
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full grid grid-cols-4 mb-8">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="rewards">Rewards</TabsTrigger>
-            <TabsTrigger value="contract">Contract</TabsTrigger>
-            <TabsTrigger value="options">Options Data</TabsTrigger>
+            <TabsTrigger value="dashboard">Epoch rewards</TabsTrigger>
+            <TabsTrigger value="rewards">Epoch lookup</TabsTrigger>
+            <TabsTrigger value="options">Options chain</TabsTrigger>
+            <TabsTrigger value="contract">Contract interface</TabsTrigger>
+
           </TabsList>
           
           <TabsContent value="dashboard">
