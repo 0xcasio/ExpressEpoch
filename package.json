@@ -5,6 +5,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "dev:client": "cd client && npm run dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:client\"",
     "build": "node vercel-build.js",
     "vercel-build": "node vercel-build.js"
   },
@@ -19,6 +21,7 @@
     "express": "^4.18.3"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "nodemon": "^3.1.0"
   },
   "engines": {
