@@ -11,10 +11,18 @@
           "public/**"
         ]
       }
+    },
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "client/dist"
+      }
     }
   ],
   
   "routes": [
-    { "src": "/(.*)", "dest": "/app.js" }
+    { "src": "/api/(.*)", "dest": "/app.js" },
+    { "src": "/(.*)", "dest": "/client/dist/$1" }
   ]
 }

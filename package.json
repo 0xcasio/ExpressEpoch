@@ -4,7 +4,9 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "build": "cd client && npm install && npm run build",
+    "vercel-build": "cd client && npm install && npm run build"
   },
   "keywords": [],
   "author": "",

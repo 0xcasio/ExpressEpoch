@@ -1,54 +1,72 @@
-# Stryke Rewards Lookup Application
+# Stryke Epoch Rewards
 
-A web application to look up rewards from a Stryke smart contract on the Arbitrum blockchain.
+A web application for looking up rewards from the Stryke protocol based on epoch and pool ID.
 
-## Features
+## Project Structure
 
-- Query rewards for specific pools or all pools at once
-- Simple and intuitive user interface
-- Works both locally and in production with Vercel
+- `/app.js` - Express.js server that handles API requests
+- `/client` - React frontend built with Vite
+- `/contract-config.js` - Configuration for the blockchain contract
+- `/contract-abi.json` - ABI for the contract
 
-## Installation
+## Local Development
 
 1. Clone the repository
 2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Create a `.env` file in the root directory with the following variables:
-
-```
-RPC_URL=https://arb1.arbitrum.io/rpc
-CONTRACT_ADDRESS=0x82C13fCab02A168F06E12373F9e5D2C2Bd47e399
-```
-
-## Running Locally
-
-To run the application locally:
-
-```bash
-npm start
-```
-
-For development with auto-restart:
-
-```bash
-npm run dev
-```
-
-Then visit `http://localhost:3000` in your browser.
+   ```
+   npm install
+   cd client && npm install
+   ```
+3. Create a `.env` file based on `.env.example`
+4. Start the development server:
+   ```
+   npm run dev
+   ```
+5. In a separate terminal, start the client:
+   ```
+   cd client && npm run dev
+   ```
 
 ## Deploying to Vercel
 
-The application is set up to deploy to Vercel. Simply push to your repository and connect it to Vercel.
+### Option 1: Deploy from GitHub
 
-Or deploy from the command line:
+1. Push your code to GitHub
+2. Create a new project on Vercel
+3. Import your GitHub repository
+4. Set the following environment variables in Vercel:
+   - `RPC_URL` - URL for the Arbitrum RPC
+   - `CONTRACT_ADDRESS` - Address of the contract
+5. Deploy
 
-```bash
-vercel
-```
+### Option 2: Deploy with Vercel CLI
+
+1. Install Vercel CLI:
+   ```
+   npm install -g vercel
+   ```
+2. Login to Vercel:
+   ```
+   vercel login
+   ```
+3. Deploy:
+   ```
+   vercel
+   ```
+
+## Environment Variables
+
+- `PORT` - Port for the server (default: 3000)
+- `RPC_URL` - URL for the Arbitrum RPC
+- `CONTRACT_ADDRESS` - Address of the contract
+- `DEBUG` - Set to true to enable debug logging
+
+## Features
+
+- View rewards for specific epochs and pools
+- Call contract functions directly
+- View options data from Stryke API
+- Dashboard with epoch countdown and historical data
 
 ## API Endpoints
 
@@ -64,4 +82,4 @@ vercel
 - `contract-abi.json` - ABI for the smart contract
 - `public/` - Static files (optional)
 - `vercel.json` - Vercel deployment configuration
-- `.env` - Environment variables (not checked into version control)# ExpressEpoch
+- `.env` - Environment variables (not checked into version control)
