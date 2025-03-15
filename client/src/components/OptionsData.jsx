@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Label } from "./ui/label";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { formatCurrency, formatNumber, formatPercentage } from "../utils/formatters";
+import ProtocolFeesChart from "./ui/protocol-fees-chart";
 
 export default function OptionsData() {
   const [isLoading, setIsLoading] = useState(true);
@@ -108,6 +109,11 @@ export default function OptionsData() {
                 markets = [];
               }
             }
+            
+            // Filter out deprecated markets
+            const activeMarketsCount = markets.length;
+            markets = markets.filter(market => market.deprecated === false);
+            console.log(`Filtered out ${activeMarketsCount - markets.length} deprecated markets for ${chain.name}`);
             
             // Check if markets have protocolFees24h property before processing
             if (markets.length > 0) {
@@ -398,6 +404,11 @@ export default function OptionsData() {
               markets = data.results;
             }
           }
+          
+          // Filter out deprecated markets
+          const activeMarketsCount = markets.length;
+          markets = markets.filter(market => market.deprecated === false);
+          console.log(`Filtered out ${activeMarketsCount - markets.length} deprecated markets for ${chain.name} when calculating fees`);
           
           // Calculate 24h fees by summing protocolFees24h from markets
           let fees24h = 0;
@@ -761,68 +772,75 @@ export default function OptionsData() {
       </div>
       
       {/* Protocol Fees by Chain */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Protocol Fees by Chain</CardTitle>
-              <CardDescription>
-                Breakdown of protocol fees by blockchain network
-              </CardDescription>
+      <div className="flex flex-col lg:flex-row gap-6">
+        <Card className="w-full lg:w-1/2">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Protocol Fees by Chain</CardTitle>
+                <CardDescription>
+                  Breakdown of protocol fees by blockchain network
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={protocolFees.isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${protocolFees.isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
             </div>
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={protocolFees.isLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${protocolFees.isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {protocolFees.isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : protocolFees.error ? (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>Error loading protocol fees: {protocolFees.error}</AlertDescription>
-            </Alert>
-          ) : Object.keys(protocolFeesByChain).length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No protocol fees data available</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Chain</TableHead>
-                    <TableHead>24h Fees</TableHead>
-                    <TableHead>Cumulative Fees</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Object.values(protocolFeesByChain)
-                    .filter(chain => chain.chainId !== 'total')
-                    .sort((a, b) => b.fees24h - a.fees24h)
-                    .map((chain, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{chain.chainName}</TableCell>
-                        <TableCell>{formatCurrency(chain.fees24h)}</TableCell>
-                        <TableCell>{formatCurrency(chain.cumulativeFees)}</TableCell>
-                      </TableRow>
-                    ))
-                  }
-                  {protocolFeesByChain.total && (
-                    <TableRow className="font-bold border-t-2">
-                      <TableCell>Total</TableCell>
-                      <TableCell>{formatCurrency(protocolFeesByChain.total.fees24h)}</TableCell>
-                      <TableCell>{formatCurrency(protocolFeesByChain.total.cumulativeFees)}</TableCell>
+          </CardHeader>
+          <CardContent>
+            {protocolFees.isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : protocolFees.error ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>Error loading protocol fees: {protocolFees.error}</AlertDescription>
+              </Alert>
+            ) : Object.keys(protocolFeesByChain).length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No protocol fees data available</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Chain</TableHead>
+                      <TableHead>24h Fees</TableHead>
+                      <TableHead>Cumulative Fees</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.values(protocolFeesByChain)
+                      .filter(chain => chain.chainId !== 'total')
+                      .sort((a, b) => b.fees24h - a.fees24h)
+                      .map((chain, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{chain.chainName}</TableCell>
+                          <TableCell>{formatCurrency(chain.fees24h)}</TableCell>
+                          <TableCell>{formatCurrency(chain.cumulativeFees)}</TableCell>
+                        </TableRow>
+                      ))
+                    }
+                    {protocolFeesByChain.total && (
+                      <TableRow className="font-bold border-t-2">
+                        <TableCell>Total</TableCell>
+                        <TableCell>{formatCurrency(protocolFeesByChain.total.fees24h)}</TableCell>
+                        <TableCell>{formatCurrency(protocolFeesByChain.total.cumulativeFees)}</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Protocol Fees Chart */}
+        <div className="w-full lg:w-1/2">
+          <ProtocolFeesChart feesByChain={protocolFeesByChain} />
+        </div>
+      </div>
     </div>
   );
 } 
