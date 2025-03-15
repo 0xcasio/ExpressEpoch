@@ -7,7 +7,7 @@ import OptionsData from './OptionsData';
 import { ThemeProvider } from "./theme-provider";
 
 export default function Layout() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("options");
 
   return (
     <ThemeProvider defaultTheme="dark" forcedTheme="dark">
@@ -17,11 +17,11 @@ export default function Layout() {
         </h1>
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-4 mb-8">
+          <TabsList className="w-full grid grid-cols-3 mb-8">
+            <TabsTrigger value="options">Options chain</TabsTrigger>
             <TabsTrigger value="dashboard">Epoch rewards</TabsTrigger>
             <TabsTrigger value="rewards">Epoch lookup</TabsTrigger>
-            <TabsTrigger value="options">Options chain</TabsTrigger>
-            <TabsTrigger value="contract">Contract interface</TabsTrigger>
+            {/* <TabsTrigger value="contract">Contract interface</TabsTrigger> */}
 
           </TabsList>
           

@@ -228,7 +228,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Previous Epoch Rewards Card */}
       <Card>
         <CardHeader>
@@ -311,6 +311,7 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
