@@ -18,36 +18,168 @@ async function fetchOptionsMarketsData() {
         document.getElementById('short-positions').textContent = 'Loading...';
         document.getElementById('global-bias').textContent = 'Loading...';
         
-        // Use our own backend as a proxy to avoid CORS issues
-        const url = '/api/options-markets?chains=42161';
-        console.log(`Fetching data from: ${url}`);
+        // Define all chains to fetch data from
+        const chains = [
+            { id: 42161, name: 'Arbitrum' },
+            { id: 146, name: 'Sonic' },
+            { id: 80094, name: 'Berachain' },
+            { id: 8453, name: 'Base' },
+            { id: 5000, name: 'Mantle' }
+        ];
         
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`API request failed with status ${response.status}: ${await response.text()}`);
+        // Create chain filter if it doesn't exist
+        if (!document.getElementById('options-markets-chain-filter')) {
+            const filterContainer = document.createElement('div');
+            filterContainer.id = 'options-markets-filter-container';
+            filterContainer.className = 'filter-container mb-3';
+            
+            // Create chain filter
+            const chainFilterLabel = document.createElement('label');
+            chainFilterLabel.htmlFor = 'options-markets-chain-filter';
+            chainFilterLabel.textContent = 'Filter by Chain: ';
+            chainFilterLabel.className = 'mr-2';
+            
+            const chainFilter = document.createElement('select');
+            chainFilter.id = 'options-markets-chain-filter';
+            chainFilter.className = 'chain-filter';
+            
+            // Add "All Chains" option
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = 'All Chains';
+            chainFilter.appendChild(allOption);
+            
+            // Add options for each chain
+            chains.forEach(chain => {
+                const option = document.createElement('option');
+                option.value = chain.name;
+                option.textContent = chain.name;
+                chainFilter.appendChild(option);
+            });
+            
+            filterContainer.appendChild(chainFilterLabel);
+            filterContainer.appendChild(chainFilter);
+            
+            // Add filter styles if not already added
+            if (!document.getElementById('options-markets-styles')) {
+                const styleElement = document.createElement('style');
+                styleElement.id = 'options-markets-styles';
+                styleElement.textContent = `
+                    .filter-container {
+                        margin-bottom: 15px;
+                        display: flex;
+                        align-items: center;
+                    }
+                    
+                    .chain-filter {
+                        padding: 5px 10px;
+                        border-radius: 4px;
+                        border: 1px solid #ccc;
+                        background-color: #f8f9fa;
+                        margin-right: 10px;
+                        color: #333;
+                    }
+                    
+                    @media (max-width: 768px) {
+                        .filter-container {
+                            flex-direction: column;
+                            align-items: flex-start;
+                        }
+                        
+                        .chain-filter {
+                            margin-top: 5px;
+                            width: 100%;
+                        }
+                    }
+                `;
+                document.head.appendChild(styleElement);
+            }
+            
+            // Insert filter before the charts container
+            const parentElement = chartsContainer.parentElement;
+            parentElement.insertBefore(filterContainer, chartsContainer);
         }
         
-        console.log('Response received successfully');
-        const data = await response.json();
-        console.log('API Response Structure:', JSON.stringify(data).substring(0, 1000) + '...');
+        // Use our own backend as a proxy to avoid CORS issues
+        console.log(`Fetching data from ${chains.length} chains...`);
         
-        // If data is empty or doesn't have the expected structure, use mock data
-        if (!data || !data.markets || !Array.isArray(data.markets) || data.markets.length === 0) {
-            console.log('Using mock data since API response is empty or invalid');
+        // Fetch data from all chains
+        const chainResponses = await Promise.allSettled(
+            chains.map(chain => 
+                fetch(`/api/options-markets?chains=${chain.id}`)
+            )
+        );
+        
+        // Process responses for each chain
+        let combinedData = { markets: [] };
+        let failedChains = [];
+        
+        for (let i = 0; i < chainResponses.length; i++) {
+            const chain = chains[i];
+            const response = chainResponses[i];
+            
+            if (response.status === 'fulfilled' && response.value.ok) {
+                console.log(`API response status - ${chain.name}:`, response.value.status);
+                
+                try {
+                    // Parse response
+                    const data = await response.value.json();
+                    
+                    console.log(`${chain.name} API Response Structure:`, JSON.stringify(data).substring(0, 300) + '...');
+                    
+                    // Process chain data
+                    if (data && data.markets && Array.isArray(data.markets)) {
+                        // Add chain information to each market
+                        const marketsWithChain = data.markets.map(market => ({
+                            ...market,
+                            chainId: chain.id,
+                            chainName: chain.name
+                        }));
+                        
+                        console.log(`Found ${marketsWithChain.length} markets for ${chain.name}`);
+                        
+                        // Add to combined data
+                        combinedData.markets = [...combinedData.markets, ...marketsWithChain];
+                    } else {
+                        console.warn(`No markets found in ${chain.name} response`);
+                    }
+                } catch (parseError) {
+                    console.error(`Error parsing ${chain.name} response:`, parseError);
+                    failedChains.push(chain.name);
+                }
+            } else {
+                console.error(`Failed to fetch data from ${chain.name}:`, 
+                    response.status === 'fulfilled' ? `Status ${response.value.status}` : response.reason);
+                failedChains.push(chain.name);
+            }
+        }
+        
+        console.log(`Combined ${combinedData.markets.length} markets from ${chains.length - failedChains.length} chains`);
+        if (failedChains.length > 0) {
+            console.warn(`Failed to fetch data from these chains: ${failedChains.join(', ')}`);
+        }
+        
+        // Store the original data for filtering
+        window.optionsMarketsData = combinedData;
+        
+        // Add event listener for chain filter
+        const chainFilter = document.getElementById('options-markets-chain-filter');
+        if (chainFilter) {
+            chainFilter.addEventListener('change', function() {
+                updateOptionsMarketsCharts();
+            });
+        }
+        
+        // If combined data is empty, use mock data
+        if (!combinedData.markets || combinedData.markets.length === 0) {
+            console.log('Using mock data since API responses are empty or invalid');
             const mockData = generateMockData();
+            window.optionsMarketsData = mockData;
             updateOptionsMarketsUI(mockData);
             createOptionsMarketsCharts(mockData);
         } else {
-            // Calculate metrics
-            console.log('Calculating metrics from API data');
-            const metrics = calculateOptionsMetrics(data);
-            
-            // Update UI
-            updateOptionsMarketsUI(metrics);
-            
-            // Create charts
-            createOptionsMarketsCharts(data);
+            // Update UI and charts
+            updateOptionsMarketsCharts();
         }
         
         // Show charts, hide loading
@@ -62,6 +194,7 @@ async function fetchOptionsMarketsData() {
         // Use mock data in case of error
         console.log('Using mock data due to error');
         const mockData = generateMockData();
+        window.optionsMarketsData = mockData;
         updateOptionsMarketsUI(mockData);
         createOptionsMarketsCharts(mockData);
         
@@ -76,6 +209,32 @@ async function fetchOptionsMarketsData() {
     }
 }
 
+// Function to update charts based on current filter
+function updateOptionsMarketsCharts() {
+    if (!window.optionsMarketsData) return;
+    
+    const chainFilter = document.getElementById('options-markets-chain-filter');
+    const selectedChain = chainFilter ? chainFilter.value : 'all';
+    
+    // Apply chain filter to data
+    let filteredData = { ...window.optionsMarketsData };
+    
+    if (selectedChain !== 'all') {
+        filteredData.markets = filteredData.markets.filter(market => 
+            market.chainName === selectedChain
+        );
+    }
+    
+    // Calculate metrics from filtered data
+    const metrics = calculateOptionsMetrics(filteredData);
+    
+    // Update UI with filtered metrics
+    updateOptionsMarketsUI(metrics);
+    
+    // Create charts with filtered data
+    createOptionsMarketsCharts(filteredData);
+}
+
 // Generate mock data for testing
 function generateMockData() {
     return {
@@ -85,11 +244,25 @@ function generateMockData() {
         globalBias: 'Long 8.45%',
         biasRatio: 0.0845,
         markets: [
-            { name: 'BTC-ETH', volume: 9500000, notionalValue: 9500000, callOptions: { count: 850 }, putOptions: { count: 650 } },
-            { name: 'ETH-USDC', volume: 7800000, notionalValue: 7800000, callOptions: { count: 720 }, putOptions: { count: 580 } },
-            { name: 'ARB-USDC', volume: 5600000, notionalValue: 5600000, callOptions: { count: 560 }, putOptions: { count: 480 } },
-            { name: 'WBTC-USDT', volume: 3200000, notionalValue: 3200000, callOptions: { count: 420 }, putOptions: { count: 380 } },
-            { name: 'SOL-USDC', volume: 2100000, notionalValue: 2100000, callOptions: { count: 320 }, putOptions: { count: 280 } }
+            // Arbitrum markets
+            { name: 'BTC-ETH', volume: 9500000, notionalValue: 9500000, callOptions: { count: 850 }, putOptions: { count: 650 }, chainId: 42161, chainName: 'Arbitrum' },
+            { name: 'ETH-USDC', volume: 7800000, notionalValue: 7800000, callOptions: { count: 720 }, putOptions: { count: 580 }, chainId: 42161, chainName: 'Arbitrum' },
+            
+            // Sonic markets
+            { name: 'ARB-USDC', volume: 5600000, notionalValue: 5600000, callOptions: { count: 560 }, putOptions: { count: 480 }, chainId: 146, chainName: 'Sonic' },
+            { name: 'WBTC-USDT', volume: 3200000, notionalValue: 3200000, callOptions: { count: 420 }, putOptions: { count: 380 }, chainId: 146, chainName: 'Sonic' },
+            
+            // Berachain markets
+            { name: 'BTC-USDC', volume: 4800000, notionalValue: 4800000, callOptions: { count: 520 }, putOptions: { count: 440 }, chainId: 80094, chainName: 'Berachain' },
+            { name: 'ETH-USDT', volume: 3900000, notionalValue: 3900000, callOptions: { count: 480 }, putOptions: { count: 410 }, chainId: 80094, chainName: 'Berachain' },
+            
+            // Base markets
+            { name: 'BTC-USDC', volume: 4200000, notionalValue: 4200000, callOptions: { count: 490 }, putOptions: { count: 420 }, chainId: 8453, chainName: 'Base' },
+            { name: 'ETH-USDT', volume: 3500000, notionalValue: 3500000, callOptions: { count: 450 }, putOptions: { count: 390 }, chainId: 8453, chainName: 'Base' },
+            
+            // Mantle markets
+            { name: 'BTC-USDC', volume: 2800000, notionalValue: 2800000, callOptions: { count: 380 }, putOptions: { count: 320 }, chainId: 5000, chainName: 'Mantle' },
+            { name: 'ETH-USDT', volume: 2100000, notionalValue: 2100000, callOptions: { count: 320 }, putOptions: { count: 280 }, chainId: 5000, chainName: 'Mantle' }
         ]
     };
 }
@@ -271,32 +444,122 @@ function createPositionsChart(canvasId, data) {
     console.log('Creating positions chart');
     const ctx = document.getElementById(canvasId).getContext('2d');
     
-    // Extract positions data
-    let longPositions = data.longPositions || 0;
-    let shortPositions = data.shortPositions || 0;
+    // Define all chains
+    const chains = [
+        { id: 42161, name: 'Arbitrum', color: '#4CAF50', borderColor: '#388E3C' },
+        { id: 146, name: 'Sonic', color: '#F44336', borderColor: '#D32F2F' },
+        { id: 80094, name: 'Berachain', color: '#8BC34A', borderColor: '#689F38' },
+        { id: 8453, name: 'Base', color: '#2196F3', borderColor: '#1976D2' },
+        { id: 5000, name: 'Mantle', color: '#FF9800', borderColor: '#F57C00' }
+    ];
+    
+    // Initialize position counts for each chain
+    const positionCounts = {};
+    chains.forEach(chain => {
+        positionCounts[chain.id] = {
+            long: 0,
+            short: 0,
+            name: chain.name,
+            color: chain.color,
+            borderColor: chain.borderColor
+        };
+    });
     
     // If the data has markets array, calculate from there
     if (data.markets && Array.isArray(data.markets)) {
         data.markets.forEach(market => {
             // Skip this step if we already have aggregated data
-            if (data.longPositions && data.shortPositions) return;
+            if (data.longPositions && data.shortPositions && !market.chainId) return;
             
-            if (market.callOptions && market.callOptions.count) longPositions += parseInt(market.callOptions.count) || 0;
-            if (market.putOptions && market.putOptions.count) shortPositions += parseInt(market.putOptions.count) || 0;
+            const chainId = market.chainId;
+            if (!chainId || !positionCounts[chainId]) return;
+            
+            // Count long positions (calls)
+            let marketLongPositions = 0;
+            if (market.callOptions && market.callOptions.count) {
+                marketLongPositions = parseInt(market.callOptions.count) || 0;
+            } else if (market.calls && market.calls.count) {
+                marketLongPositions = parseInt(market.calls.count) || 0;
+            } else if (market.longPositions) {
+                marketLongPositions = parseInt(market.longPositions) || 0;
+            } else if (market.callCount) {
+                marketLongPositions = parseInt(market.callCount) || 0;
+            }
+            
+            // Count short positions (puts)
+            let marketShortPositions = 0;
+            if (market.putOptions && market.putOptions.count) {
+                marketShortPositions = parseInt(market.putOptions.count) || 0;
+            } else if (market.puts && market.puts.count) {
+                marketShortPositions = parseInt(market.puts.count) || 0;
+            } else if (market.shortPositions) {
+                marketShortPositions = parseInt(market.shortPositions) || 0;
+            } else if (market.putCount) {
+                marketShortPositions = parseInt(market.putCount) || 0;
+            }
+            
+            // Add to the appropriate chain totals
+            positionCounts[chainId].long += marketLongPositions;
+            positionCounts[chainId].short += marketShortPositions;
         });
+    } else if (data.longPositions && data.shortPositions) {
+        // If we have aggregated data without chain information, distribute proportionally
+        // This is just a fallback for mock data
+        const totalLong = data.longPositions;
+        const totalShort = data.shortPositions;
+        
+        // Distribute in a reasonable proportion
+        positionCounts[42161].long = Math.round(totalLong * 0.4); // 40% to Arbitrum
+        positionCounts[42161].short = Math.round(totalShort * 0.4);
+        
+        positionCounts[146].long = Math.round(totalLong * 0.2); // 20% to Sonic
+        positionCounts[146].short = Math.round(totalShort * 0.2);
+        
+        positionCounts[80094].long = Math.round(totalLong * 0.15); // 15% to Berachain
+        positionCounts[80094].short = Math.round(totalShort * 0.15);
+        
+        positionCounts[8453].long = Math.round(totalLong * 0.15); // 15% to Base
+        positionCounts[8453].short = Math.round(totalShort * 0.15);
+        
+        positionCounts[5000].long = Math.round(totalLong * 0.1); // 10% to Mantle
+        positionCounts[5000].short = Math.round(totalShort * 0.1);
     }
     
-    console.log(`Chart data: Long=${longPositions}, Short=${shortPositions}`);
+    // Prepare data for the chart
+    const labels = [];
+    const chartData = [];
+    const backgroundColors = [];
+    const borderColors = [];
+    
+    // Add data for each chain
+    chains.forEach(chain => {
+        const chainData = positionCounts[chain.id];
+        
+        // Only include chains with data
+        if (chainData.long > 0 || chainData.short > 0) {
+            labels.push(`${chainData.name} Long`);
+            chartData.push(chainData.long);
+            backgroundColors.push(chainData.color);
+            borderColors.push(chainData.borderColor);
+            
+            labels.push(`${chainData.name} Short`);
+            chartData.push(chainData.short);
+            backgroundColors.push(chainData.color + '80'); // Add transparency for short positions
+            borderColors.push(chainData.borderColor + '80');
+        }
+    });
+    
+    console.log('Position chart data:', positionCounts);
     
     // Create the chart
     new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: ['Long Positions', 'Short Positions'],
+            labels: labels,
             datasets: [{
-                data: [longPositions, shortPositions],
-                backgroundColor: ['#4CAF50', '#F44336'],
-                borderColor: ['#388E3C', '#D32F2F'],
+                data: chartData,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
                 borderWidth: 1
             }]
         },
@@ -312,7 +575,7 @@ function createPositionsChart(canvasId, data) {
                 },
                 title: {
                     display: true,
-                    text: 'Position Distribution',
+                    text: 'Position Distribution by Chain',
                     color: '#fff',
                     font: {
                         size: 16
@@ -328,9 +591,20 @@ function createVolumeChart(canvasId, data) {
     console.log('Creating volume chart');
     const ctx = document.getElementById(canvasId).getContext('2d');
     
+    // Define chain colors
+    const chainColors = {
+        42161: { bg: '#F3FF69', border: '#D1DD28' }, // Arbitrum - Yellow
+        146: { bg: '#69FFF3', border: '#28DDD1' },   // Sonic - Cyan
+        80094: { bg: '#8BC34A', border: '#689F38' }, // Berachain - Green
+        8453: { bg: '#2196F3', border: '#1976D2' },  // Base - Blue
+        5000: { bg: '#FF9800', border: '#F57C00' }   // Mantle - Orange
+    };
+    
     // Extract market volume data
     const markets = [];
     const volumes = [];
+    const colors = [];
+    const borderColors = [];
     
     if (data.markets && Array.isArray(data.markets)) {
         // Sort markets by volume for better visualization
@@ -344,18 +618,56 @@ function createVolumeChart(canvasId, data) {
             .slice(0, 10); // Take top 10 markets
         
         sortedMarkets.forEach(market => {
-            markets.push(market.name || market.pair || 'Unknown');
+            // Include chain name in the market label
+            const chainName = market.chainName || 
+                             (market.chainId === 42161 ? 'Arbitrum' : 
+                              market.chainId === 146 ? 'Sonic' : 
+                              market.chainId === 80094 ? 'Berachain' :
+                              market.chainId === 8453 ? 'Base' :
+                              market.chainId === 5000 ? 'Mantle' : 'Unknown');
+            
+            const marketLabel = `${market.name || market.pair || 'Unknown'} (${chainName})`;
+            
+            markets.push(marketLabel);
             volumes.push(parseFloat(market.volume || market.notionalValue || 0));
+            
+            // Use color based on chain
+            const chainId = market.chainId;
+            if (chainId && chainColors[chainId]) {
+                colors.push(chainColors[chainId].bg);
+                borderColors.push(chainColors[chainId].border);
+            } else {
+                // Default color if chain not recognized
+                colors.push('#F3FF69');
+                borderColors.push('#D1DD28');
+            }
         });
         
-        console.log('Sorted markets for chart:', sortedMarkets.map(m => m.name || m.pair || 'Unknown'));
+        console.log('Sorted markets for chart:', sortedMarkets.map(m => `${m.name || m.pair || 'Unknown'} (${m.chainName || ''})`));
     }
     
     // If no data, provide some placeholder data
     if (markets.length === 0) {
-        ['BTC-ETH', 'ETH-USDC', 'ARB-USDC', 'WBTC-USDT', 'SOL-USDC'].forEach((pair, index) => {
-            markets.push(pair);
+        const mockMarkets = [
+            { name: 'BTC-ETH', chain: 'Arbitrum', chainId: 42161 },
+            { name: 'ETH-USDC', chain: 'Arbitrum', chainId: 42161 },
+            { name: 'ARB-USDC', chain: 'Sonic', chainId: 146 },
+            { name: 'BTC-USDC', chain: 'Berachain', chainId: 80094 },
+            { name: 'ETH-USDT', chain: 'Base', chainId: 8453 },
+            { name: 'BTC-USDC', chain: 'Mantle', chainId: 5000 }
+        ];
+        
+        mockMarkets.forEach(market => {
+            markets.push(`${market.name} (${market.chain})`);
             volumes.push(Math.random() * 1000000); // Random mock data
+            
+            if (chainColors[market.chainId]) {
+                colors.push(chainColors[market.chainId].bg);
+                borderColors.push(chainColors[market.chainId].border);
+            } else {
+                colors.push('#F3FF69');
+                borderColors.push('#D1DD28');
+            }
         });
     }
     
@@ -369,8 +681,8 @@ function createVolumeChart(canvasId, data) {
             datasets: [{
                 label: 'Market Volume',
                 data: volumes,
-                backgroundColor: '#F3FF69',
-                borderColor: '#D1DD28',
+                backgroundColor: colors,
+                borderColor: borderColors,
                 borderWidth: 1
             }]
         },
@@ -387,6 +699,14 @@ function createVolumeChart(canvasId, data) {
                     color: '#fff',
                     font: {
                         size: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            return `Volume: ${formatCompactNumber(value)}`;
+                        }
                     }
                 }
             },

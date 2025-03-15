@@ -24,68 +24,122 @@ async function fetchOptionsData() {
     document.getElementById('options-global-bias').textContent = 'Loading...';
     
     try {
-        // Fetch data from API
-        console.log('Making request to API...');
-        const response = await fetch('https://api.stryke.xyz/v1.1/clamm/option-markets?chains=42161', {
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
+        // Define all chains to fetch data from
+        const chains = [
+            { id: 42161, name: 'Arbitrum' },
+            { id: 146, name: 'Sonic' },
+            { id: 80094, name: 'Berachain' },
+            { id: 8453, name: 'Base' },
+            { id: 5000, name: 'Mantle' }
+        ];
         
-        console.log('API response status:', response.status);
+        console.log(`Making requests to API for ${chains.length} chains...`);
         
-        if (!response.ok) {
-            throw new Error(`API request failed with status ${response.status}`);
-        }
+        // Fetch data from all chains
+        const chainResponses = await Promise.allSettled(
+            chains.map(chain => 
+                fetch(`https://api.stryke.xyz/v1.1/clamm/option-markets?chains=${chain.id}`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+            )
+        );
         
-        const data = await response.json();
-        console.log('API response received');
+        // Process responses for each chain
+        let allMarkets = [];
+        let failedChains = [];
         
-        // Log the actual structure
-        console.log('API response keys:', Object.keys(data));
-        console.log('API response type:', typeof data);
-        
-        // More flexible handling of the API response structure
-        let markets = [];
-        
-        if (data && typeof data === 'object') {
-            // Try to find markets data in different possible locations
-            if (data.markets && Array.isArray(data.markets)) {
-                console.log('Found markets array in data.markets');
-                markets = data.markets;
-            } else if (data.data && data.data.markets && Array.isArray(data.data.markets)) {
-                console.log('Found markets array in data.data.markets');
-                markets = data.data.markets;
-            } else if (Array.isArray(data)) {
-                console.log('Data itself is an array, using it as markets');
-                markets = data;
-            } else if (data.results && Array.isArray(data.results)) {
-                console.log('Found markets array in data.results');
-                markets = data.results;
+        for (let i = 0; i < chainResponses.length; i++) {
+            const chain = chains[i];
+            const response = chainResponses[i];
+            
+            if (response.status === 'fulfilled' && response.value.ok) {
+                console.log(`API response status - ${chain.name}:`, response.value.status);
+                
+                try {
+                    // Parse response
+                    const data = await response.value.json();
+                    
+                    // Log the actual structure
+                    console.log(`${chain.name} API response keys:`, Object.keys(data));
+                    
+                    // Extract markets from the response
+                    let markets = [];
+                    
+                    if (data && typeof data === 'object') {
+                        // Try to find markets data in different possible locations
+                        if (data.markets && Array.isArray(data.markets)) {
+                            console.log(`Found ${chain.name} markets array in data.markets`);
+                            markets = data.markets;
+                        } else if (data.data && data.data.markets && Array.isArray(data.data.markets)) {
+                            console.log(`Found ${chain.name} markets array in data.data.markets`);
+                            markets = data.data.markets;
+                        } else if (Array.isArray(data)) {
+                            console.log(`${chain.name} data itself is an array, using it as markets`);
+                            markets = data;
+                        } else if (data.results && Array.isArray(data.results)) {
+                            console.log(`Found ${chain.name} markets array in data.results`);
+                            markets = data.results;
+                        } else {
+                            console.warn(`Could not find ${chain.name} markets array in the API response`);
+                            console.log(`Full ${chain.name} API response:`, data);
+                            markets = [];
+                        }
+                    }
+                    
+                    // Add chain information to each market
+                    markets = markets.map(market => ({
+                        ...market,
+                        chainId: chain.id,
+                        chainName: chain.name
+                    }));
+                    
+                    console.log(`Found ${markets.length} markets for ${chain.name}`);
+                    
+                    // Add to all markets
+                    allMarkets = [...allMarkets, ...markets];
+                    
+                } catch (parseError) {
+                    console.error(`Error parsing ${chain.name} response:`, parseError);
+                    failedChains.push(chain.name);
+                }
             } else {
-                console.warn('Could not find markets array in the API response');
-                console.log('Full API response:', data);
-                markets = [];
+                console.error(`Failed to fetch data from ${chain.name}:`, 
+                    response.status === 'fulfilled' ? `Status ${response.value.status}` : response.reason);
+                failedChains.push(chain.name);
             }
         }
         
-        console.log(`Found ${markets.length} markets in the API response`);
+        console.log(`Combined into ${allMarkets.length} total markets from ${chains.length - failedChains.length} chains`);
+        if (failedChains.length > 0) {
+            console.warn(`Failed to fetch data from these chains: ${failedChains.join(', ')}`);
+        }
         
-        if (markets.length === 0) {
-            console.warn('No markets found in API response, using mock data');
-            markets = generateMockMarkets();
+        if (allMarkets.length === 0) {
+            console.warn('No markets found in API responses, using mock data');
+            const mockMarkets = generateMockMarkets();
             errorElement.classList.remove('hidden');
             errorElement.textContent = 'API returned no market data. Using sample data instead.';
+            
+            // Calculate metrics
+            const metrics = calculateOptionsMetrics(mockMarkets);
+            
+            // Update UI with metrics
+            updateOptionsDataUI(metrics);
+            
+            // Create the markets table
+            createOptionsMarketsTable(mockMarkets);
+        } else {
+            // Calculate metrics
+            const metrics = calculateOptionsMetrics(allMarkets);
+            
+            // Update UI with metrics
+            updateOptionsDataUI(metrics);
+            
+            // Create the markets table
+            createOptionsMarketsTable(allMarkets);
         }
-        
-        // Calculate metrics
-        const metrics = calculateOptionsMetrics(markets);
-        
-        // Update UI with metrics
-        updateOptionsDataUI(metrics);
-        
-        // Create the markets table
-        createOptionsMarketsTable(markets);
         
         // Hide loading, show table
         loadingElement.classList.add('hidden');
@@ -257,13 +311,162 @@ function updateOptionsDataUI(metrics) {
 function createOptionsMarketsTable(markets) {
     console.log('Creating options markets table');
     
+    const tableContainer = document.getElementById('options-data-table-container');
     const tableBody = document.getElementById('options-data-table-body');
+    
+    // Get unique chain names for filter
+    const chainNames = [...new Set(markets.map(market => market.chainName || 'Unknown'))].sort();
+    
+    // Create filter controls if they don't exist
+    if (!document.getElementById('chain-filter-container')) {
+        const filterContainer = document.createElement('div');
+        filterContainer.id = 'chain-filter-container';
+        filterContainer.className = 'filter-container mb-3';
+        
+        // Create chain filter
+        const chainFilterLabel = document.createElement('label');
+        chainFilterLabel.htmlFor = 'chain-filter';
+        chainFilterLabel.textContent = 'Filter by Chain: ';
+        chainFilterLabel.className = 'mr-2';
+        
+        const chainFilter = document.createElement('select');
+        chainFilter.id = 'chain-filter';
+        chainFilter.className = 'chain-filter';
+        
+        // Add "All Chains" option
+        const allOption = document.createElement('option');
+        allOption.value = 'all';
+        allOption.textContent = 'All Chains';
+        chainFilter.appendChild(allOption);
+        
+        // Add options for each chain
+        chainNames.forEach(chainName => {
+            const option = document.createElement('option');
+            option.value = chainName;
+            option.textContent = chainName;
+            chainFilter.appendChild(option);
+        });
+        
+        // Add event listener for filter change
+        chainFilter.addEventListener('change', function() {
+            updateMarketsTable(markets);
+        });
+        
+        filterContainer.appendChild(chainFilterLabel);
+        filterContainer.appendChild(chainFilter);
+        
+        // Insert filter before the table
+        tableContainer.insertBefore(filterContainer, tableContainer.firstChild);
+    } else {
+        // Update chain filter options if it already exists
+        const chainFilter = document.getElementById('chain-filter');
+        const currentValue = chainFilter.value;
+        
+        // Clear existing options
+        while (chainFilter.options.length > 1) { // Keep "All Chains" option
+            chainFilter.remove(1);
+        }
+        
+        // Add options for each chain
+        chainNames.forEach(chainName => {
+            const option = document.createElement('option');
+            option.value = chainName;
+            option.textContent = chainName;
+            chainFilter.appendChild(option);
+        });
+        
+        // Restore selected value if it still exists
+        if (chainNames.includes(currentValue)) {
+            chainFilter.value = currentValue;
+        } else {
+            chainFilter.value = 'all';
+        }
+    }
+    
+    // Add sort indicators to table headers if they don't exist
+    if (!document.querySelector('.sortable')) {
+        const headers = document.querySelectorAll('#options-data-table thead th');
+        
+        // Make Open Interest, Total Liquidity, and 24h Volume headers sortable
+        const sortableColumns = ['Open Interest', 'Total Liquidity', '24h Volume'];
+        headers.forEach(header => {
+            if (sortableColumns.includes(header.textContent.trim())) {
+                header.className = 'sortable';
+                header.dataset.sort = 'none'; // Initial sort state
+                
+                // Set Total Liquidity as default sort (descending)
+                if (header.textContent.trim() === 'Total Liquidity') {
+                    header.dataset.sort = 'desc';
+                }
+                
+                // Add sort indicator
+                const sortIndicator = document.createElement('span');
+                sortIndicator.className = 'sort-indicator ml-1';
+                sortIndicator.innerHTML = '&#8597;'; // Up/down arrow
+                header.appendChild(sortIndicator);
+                
+                // Add click event for sorting
+                header.addEventListener('click', function() {
+                    // Update sort direction
+                    const currentSort = this.dataset.sort;
+                    
+                    // Reset all headers
+                    headers.forEach(h => {
+                        if (h.classList.contains('sortable')) {
+                            h.dataset.sort = 'none';
+                        }
+                    });
+                    
+                    // Set new sort direction
+                    this.dataset.sort = currentSort === 'desc' ? 'asc' : 'desc';
+                    
+                    // Update table
+                    updateMarketsTable(markets);
+                });
+            }
+        });
+    }
+    
+    // Initial table update
+    updateMarketsTable(markets);
+    
+    // Setup mobile table headers
+    setupMobileTableHeaders('options-data-table');
+}
+
+// Function to update the markets table based on current filters and sort
+function updateMarketsTable(markets) {
+    const tableBody = document.getElementById('options-data-table-body');
+    const chainFilter = document.getElementById('chain-filter');
+    
+    // Get current filter value
+    const selectedChain = chainFilter.value;
+    
+    // Get current sort column and direction
+    let sortColumn = 'liquidity'; // Default sort column
+    let sortDirection = 'desc'; // Default sort direction
+    
+    const headers = document.querySelectorAll('#options-data-table thead th');
+    headers.forEach(header => {
+        if (header.dataset.sort === 'asc' || header.dataset.sort === 'desc') {
+            // Map header text to data property
+            if (header.textContent.includes('Open Interest')) {
+                sortColumn = 'openInterest';
+            } else if (header.textContent.includes('Total Liquidity')) {
+                sortColumn = 'liquidity';
+            } else if (header.textContent.includes('24h Volume')) {
+                sortColumn = 'volume';
+            }
+            
+            sortDirection = header.dataset.sort;
+        }
+    });
+    
+    // Process and filter markets
+    let processedMarkets = processMarketsForTable(markets, selectedChain, sortColumn, sortDirection);
     
     // Clear existing table rows
     tableBody.innerHTML = '';
-    
-    // Process market data
-    const processedMarkets = processMarketsForTable(markets);
     
     // Create table rows
     processedMarkets.forEach(market => {
@@ -274,6 +477,12 @@ function createOptionsMarketsTable(markets) {
         nameCell.textContent = market.name;
         nameCell.setAttribute('data-label', 'Market');
         row.appendChild(nameCell);
+        
+        // Chain name
+        const chainCell = document.createElement('td');
+        chainCell.textContent = market.chainName;
+        chainCell.setAttribute('data-label', 'Chain');
+        row.appendChild(chainCell);
         
         // Open Interest
         const oiCell = document.createElement('td');
@@ -296,27 +505,15 @@ function createOptionsMarketsTable(markets) {
         // Add the row to the table
         tableBody.appendChild(row);
     });
-    
-    // Setup mobile table headers
-    setupMobileTableHeaders('options-data-table');
 }
 
 // Process market data for table display
-function processMarketsForTable(markets) {
+function processMarketsForTable(markets, chainFilter = 'all', sortColumn = 'liquidity', sortDirection = 'desc') {
     // Extract and normalize market data
     const processedMarkets = markets.map(market => {
         // Get market name - prioritize ticker property
         const name = market.ticker || market.name || market.symbol || market.pair || 
                      (market.underlying && market.underlying.symbol) || 'Unknown';
-        
-        // Log the market data to see available properties
-        console.log('Processing market:', {
-            ticker: market.ticker,
-            name: market.name,
-            symbol: market.symbol,
-            pair: market.pair,
-            final_name_used: name
-        });
         
         // Get open interest
         let openInterest = 0;
@@ -344,33 +541,70 @@ function processMarketsForTable(markets) {
             volume = parseFloat(market.volume);
         }
         
+        // Get chain information
+        let chainName = market.chainName || 'Unknown';
+        if (!market.chainName && market.chainId) {
+            chainName = market.chainId === 42161 ? 'Arbitrum' : 
+                        market.chainId === 146 ? 'Sonic' : 
+                        market.chainId === 80094 ? 'Berachain' :
+                        market.chainId === 8453 ? 'Base' :
+                        market.chainId === 5000 ? 'Mantle' : 'Unknown';
+        }
+        
         return {
             name,
             openInterest: isNaN(openInterest) ? 0 : openInterest,
             liquidity: isNaN(liquidity) ? 0 : liquidity,
-            volume: isNaN(volume) ? 0 : volume
+            volume: isNaN(volume) ? 0 : volume,
+            chainName
         };
     });
     
-    // Sort by volume (highest first)
-    processedMarkets.sort((a, b) => b.volume - a.volume);
+    // Apply chain filter
+    let filteredMarkets = processedMarkets;
+    if (chainFilter !== 'all') {
+        filteredMarkets = processedMarkets.filter(market => market.chainName === chainFilter);
+    }
     
-    // Return top 10 markets
-    return processedMarkets.slice(0, 10);
+    // Apply sorting
+    filteredMarkets.sort((a, b) => {
+        const valueA = a[sortColumn];
+        const valueB = b[sortColumn];
+        
+        if (sortDirection === 'asc') {
+            return valueA - valueB;
+        } else {
+            return valueB - valueA;
+        }
+    });
+    
+    // Return top markets (increase to show more with filters)
+    return filteredMarkets.slice(0, 20); // Show more markets when filtered
 }
+
 // Function to generate mock market data for testing or fallback
 function generateMockMarkets() {
     return [
-        { name: 'BTC-USD', openInterest: 12500000, totalLiquidity: 9800000, volume24h: 5600000 },
-        { name: 'ETH-USD', openInterest: 8700000, totalLiquidity: 7200000, volume24h: 3800000 },
-        { name: 'ARB-USD', openInterest: 5300000, totalLiquidity: 4100000, volume24h: 2200000 },
-        { name: 'SOL-USD', openInterest: 3200000, totalLiquidity: 2800000, volume24h: 1500000 },
-        { name: 'AVAX-USD', openInterest: 1900000, totalLiquidity: 1600000, volume24h: 900000 },
-        { name: 'MATIC-USD', openInterest: 1500000, totalLiquidity: 1200000, volume24h: 700000 },
-        { name: 'LINK-USD', openInterest: 1200000, totalLiquidity: 1000000, volume24h: 600000 },
-        { name: 'DOGE-USD', openInterest: 1000000, totalLiquidity: 800000, volume24h: 500000 },
-        { name: 'UNI-USD', openInterest: 700000, totalLiquidity: 600000, volume24h: 350000 },
-        { name: 'SHIB-USD', openInterest: 500000, totalLiquidity: 450000, volume24h: 250000 }
+        // Arbitrum markets
+        { name: 'BTC-USD', openInterest: 12500000, totalLiquidity: 9800000, volume24h: 5600000, chainId: 42161, chainName: 'Arbitrum' },
+        { name: 'ETH-USD', openInterest: 8700000, totalLiquidity: 7200000, volume24h: 3800000, chainId: 42161, chainName: 'Arbitrum' },
+        { name: 'ARB-USD', openInterest: 5300000, totalLiquidity: 4100000, volume24h: 2200000, chainId: 42161, chainName: 'Arbitrum' },
+        
+        // Sonic markets
+        { name: 'BTC-USD', openInterest: 1800000, totalLiquidity: 1500000, volume24h: 850000, chainId: 146, chainName: 'Sonic' },
+        { name: 'ETH-USD', openInterest: 1500000, totalLiquidity: 1200000, volume24h: 700000, chainId: 146, chainName: 'Sonic' },
+        
+        // Berachain markets
+        { name: 'BTC-USD', openInterest: 3200000, totalLiquidity: 2800000, volume24h: 1500000, chainId: 80094, chainName: 'Berachain' },
+        { name: 'ETH-USD', openInterest: 2700000, totalLiquidity: 2300000, volume24h: 1200000, chainId: 80094, chainName: 'Berachain' },
+        
+        // Base markets
+        { name: 'BTC-USD', openInterest: 4100000, totalLiquidity: 3600000, volume24h: 1900000, chainId: 8453, chainName: 'Base' },
+        { name: 'ETH-USD', openInterest: 3500000, totalLiquidity: 3000000, volume24h: 1600000, chainId: 8453, chainName: 'Base' },
+        
+        // Mantle markets
+        { name: 'BTC-USD', openInterest: 2200000, totalLiquidity: 1800000, volume24h: 950000, chainId: 5000, chainName: 'Mantle' },
+        { name: 'ETH-USD', openInterest: 1900000, totalLiquidity: 1500000, volume24h: 800000, chainId: 5000, chainName: 'Mantle' }
     ];
 }
 
@@ -420,6 +654,68 @@ function setupMobileTableHeaders(tableId) {
 // Initialize options data tab when it's opened
 function initOptionsDataTab() {
     console.log('Initializing Options Data Tab');
+    
+    // Add CSS styles for filters and sortable headers if not already added
+    if (!document.getElementById('options-data-styles')) {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'options-data-styles';
+        styleElement.textContent = `
+            .filter-container {
+                margin-bottom: 15px;
+                display: flex;
+                align-items: center;
+            }
+            
+            .chain-filter {
+                padding: 5px 10px;
+                border-radius: 4px;
+                border: 1px solid #ccc;
+                background-color: #f8f9fa;
+                margin-right: 10px;
+            }
+            
+            .sortable {
+                cursor: pointer;
+                position: relative;
+                user-select: none;
+            }
+            
+            .sortable:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+            }
+            
+            .sort-indicator {
+                margin-left: 5px;
+                font-size: 0.8em;
+            }
+            
+            th[data-sort="asc"] .sort-indicator:after {
+                content: "▲";
+            }
+            
+            th[data-sort="desc"] .sort-indicator:after {
+                content: "▼";
+            }
+            
+            th[data-sort="none"] .sort-indicator:after {
+                content: "⇅";
+            }
+            
+            @media (max-width: 768px) {
+                .filter-container {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+                
+                .chain-filter {
+                    margin-top: 5px;
+                    width: 100%;
+                }
+            }
+        `;
+        document.head.appendChild(styleElement);
+    }
+    
     fetchOptionsData();
 }
 
