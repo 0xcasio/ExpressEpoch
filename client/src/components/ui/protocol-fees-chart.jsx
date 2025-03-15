@@ -8,7 +8,7 @@ import { formatCurrency } from "../../utils/formatters";
 const CHAIN_COLORS = {
   'Arbitrum': '#10B981', // Green
   'Sonic': '#3B82F6',    // Blue
-  'Berachain': '#8B5CF6', // Purple
+  'Berachain': '#FF9800', // Orange (changed from purple)
   'Base': '#EC4899',     // Pink
   'Mantle': '#F59E0B',   // Amber
   'Blast': '#EF4444',    // Red
@@ -32,6 +32,14 @@ const ProtocolFeesChart = ({ feesByChain }) => {
     // Number of days to show based on selected time range
     const days = timeRange === '7d' ? 7 : timeRange === '14d' ? 14 : 30;
     
+    // Get the total cumulative fees to ensure our chart matches the actual total
+    const totalCumulativeFees = feesByChain.total ? feesByChain.total.cumulativeFees : 
+      Object.values(feesByChain)
+        .filter(chain => chain.chainId !== 'total')
+        .reduce((sum, chain) => sum + chain.cumulativeFees, 0);
+    
+    console.log('Total cumulative fees for chart:', totalCumulativeFees);
+    
     // Generate data points for each day
     return Array.from({ length: days }).map((_, index) => {
       const date = new Date();
@@ -42,17 +50,21 @@ const ProtocolFeesChart = ({ feesByChain }) => {
         date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       };
       
+      // Calculate the proportion of total fees to show for this day
+      // For the last day, we want to show exactly the current cumulative fees
+      const dayProportion = index === days - 1 ? 1 : (index / (days - 1)) * 0.9;
+      
       // Add cumulative fees for each chain
-      // This creates a progressive increase based on current values
       chains.forEach(chainName => {
         const chain = Object.values(feesByChain).find(c => c.chainName === chainName);
-        if (chain) {
-          // Create a progressive growth pattern
-          const growthFactor = 1 + (index / days);
-          const baseValue = chain.cumulativeFees / days * (index + 1);
-          // Add some randomness to make it look more realistic
-          const randomFactor = 0.9 + Math.random() * 0.2;
-          dataPoint[chainName] = baseValue * growthFactor * randomFactor;
+        if (chain && chain.cumulativeFees > 0) {
+          if (index === days - 1) {
+            // For the last day, use the exact cumulative fees value
+            dataPoint[chainName] = chain.cumulativeFees;
+          } else {
+            // For previous days, create a progressive growth pattern
+            dataPoint[chainName] = chain.cumulativeFees * dayProportion;
+          }
         }
       });
       
