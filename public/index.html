@@ -282,6 +282,46 @@
             </table>
         </div>
     </div>
+    
+    <!-- Protocol Fees Section -->
+    <h3>Protocol Fees</h3>
+    <div class="dashboard-grid">
+        <!-- 24h Protocol Fees Card -->
+        <div class="info-card">
+            <h3>24h Protocol Fees</h3>
+            <div class="info-value" id="options-24h-fees">Loading...</div>
+            <div class="info-description">Protocol fees generated in the last 24 hours</div>
+        </div>
+        
+        <!-- Cumulative Protocol Fees Card -->
+        <div class="info-card">
+            <h3>Cumulative Protocol Fees</h3>
+            <div class="info-value" id="options-cumulative-fees">Loading...</div>
+            <div class="info-description">Total protocol fees since January 28, 2025</div>
+        </div>
+    </div>
+    
+    <!-- Protocol Fees Table -->
+    <div class="info-card">
+        <h3>Protocol Fees by Chain</h3>
+        <div class="info-description">Breakdown of protocol fees by blockchain network</div>
+        <div id="protocol-fees-loading">Loading fees data...</div>
+        <div id="protocol-fees-error" class="hidden" style="color: #ff6969;"></div>
+        <div id="protocol-fees-table-container" class="hidden">
+            <table id="protocol-fees-table">
+                <thead>
+                    <tr>
+                        <th>Chain</th>
+                        <th>24h Fees</th>
+                        <th>Cumulative Fees</th>
+                    </tr>
+                </thead>
+                <tbody id="protocol-fees-table-body">
+                    <!-- Table rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
     <script>

@@ -98,3 +98,103 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Add styles for protocol fees table */
+.protocol-fees-table .total-row {
+  background-color: rgba(0, 0, 0, 0.05);
+  font-weight: bold;
+}
+
+/* Add responsive styles for mobile */
+@media (max-width: 768px) {
+  .protocol-fees-table th,
+  .protocol-fees-table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Add styles for the filter container */
+.filter-container {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Add styles for sortable headers */
+.sortable {
+  cursor: pointer;
+  position: relative;
+}
+
+.sortable:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.sort-indicator {
+  margin-left: 0.25rem;
+}
+
+/* Add styles for the stats cards */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card-title {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.stat-card-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Add styles for the options data container */
+.options-data-container {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.options-data-container h2 {
+  margin-bottom: 1.5rem;
+}
+
+.options-data-container h3 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+/* Add styles for loading and error states */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.error-container {
+  padding: 1rem;
+  background-color: #fee2e2;
+  border: 1px solid #ef4444;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
