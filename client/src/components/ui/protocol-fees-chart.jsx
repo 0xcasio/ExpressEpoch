@@ -3,17 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./car
 import { Button } from "./button";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency } from "../../utils/formatters";
-
-// Color palette for different chains
-const CHAIN_COLORS = {
-  'Arbitrum': '#10B981', // Green
-  'Sonic': '#3B82F6',    // Blue
-  'Berachain': '#FF9800', // Orange (changed from purple)
-  'Base': '#EC4899',     // Pink
-  'Mantle': '#F59E0B',   // Amber
-  'Blast': '#EF4444',    // Red
-  'Total': '#6B7280'     // Gray
-};
+import { CHAIN_COLORS } from "../../config/chain-colors";
 
 const ProtocolFeesChart = ({ feesByChain }) => {
   const [timeRange, setTimeRange] = useState('7d'); // Default to 7 days

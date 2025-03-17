@@ -2,17 +2,7 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./card";
 import { Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { formatCurrency } from "../../utils/formatters";
-
-// Color palette for different chains
-const CHAIN_COLORS = {
-  'Arbitrum': '#10B981', // Green
-  'Sonic': '#3B82F6',    // Blue
-  'Berachain': '#FF9800', // Orange
-  'Base': '#EC4899',     // Pink
-  'Mantle': '#F59E0B',   // Amber
-  'Blast': '#EF4444',    // Red
-  'Unknown': '#6B7280'   // Gray
-};
+import { CHAIN_COLORS } from "../../config/chain-colors";
 
 // Custom tooltip component
 const CustomTooltip = ({ active, payload }) => {
@@ -120,6 +110,7 @@ const LiquidityPieChart = ({ marketsData }) => {
                   innerRadius={75}
                   outerRadius={100}
                   paddingAngle={2}
+                  stroke="none"
                 />
               </PieChart>
             </ResponsiveContainer>
