@@ -31,56 +31,10 @@ app.use((req, res, next) => {
 
 // Function to extract and log all read functions from the ABI
 function printReadFunctions() {
-  console.log('=== READ FUNCTIONS FROM CONTRACT ABI ===');
-  
   // Filter the ABI to only include view functions (read functions)
   const readFunctions = contractAbi.filter(item => 
     item.type === 'function' && item.stateMutability === 'view'
   );
-  
-  // Print each read function with its inputs and outputs
-  readFunctions.forEach((func, index) => {
-    // Format the function signature
-    let signature = `${func.name}(`;
-    
-    // Add input parameters
-    if (func.inputs && func.inputs.length > 0) {
-      signature += func.inputs.map(input => {
-        return `${input.type} ${input.name || ''}`.trim();
-      }).join(', ');
-    }
-    
-    signature += ')';
-    
-    // Add output types
-    if (func.outputs && func.outputs.length > 0) {
-      const outputTypes = func.outputs.map(output => output.type).join(', ');
-      signature += ` returns (${outputTypes})`;
-    }
-    
-    console.log(`${index + 1}. ${signature}`);
-    
-    // Print more details about inputs if they exist
-    if (func.inputs && func.inputs.length > 0) {
-      console.log('   Inputs:');
-      func.inputs.forEach((input, i) => {
-        console.log(`     ${i + 1}. ${input.type} ${input.name || ''}`);
-      });
-    }
-    
-    // Print more details about outputs if they exist
-    if (func.outputs && func.outputs.length > 0) {
-      console.log('   Outputs:');
-      func.outputs.forEach((output, i) => {
-        console.log(`     ${i + 1}. ${output.type} ${output.name || ''}`);
-      });
-    }
-    
-    console.log(''); // Add a blank line for readability
-  });
-  
-  console.log(`Total read functions: ${readFunctions.length}`);
-  console.log('=====================================');
   
   return readFunctions;
 }
@@ -90,21 +44,17 @@ try {
   if (fs.existsSync(path.join(__dirname, 'contract-abi.json'))) {
     const abiJson = fs.readFileSync(path.join(__dirname, 'contract-abi.json'), 'utf8');
     config.contractAbi = JSON.parse(abiJson);
-    console.log('Loaded contract ABI from file');
-  } else {
-    console.log('Using default contractAbi');
   }
 } catch (error) {
   console.log('Error loading ABI file, using default ABI');
 }
 
-// Call the function to print read functions when the app starts
+// Call the function to get read functions when the app starts
 const readFunctions = printReadFunctions();
 
 // Process function call for all pool IDs
 async function processAllPoolIds(epochValue) {
   const results = [];
-  console.log(`Processing ${config.predefinedInputs.poolIds.length} predefined pool IDs with epoch = ${epochValue}`);
   
   try {
     // Format input2
@@ -122,8 +72,6 @@ async function processAllPoolIds(epochValue) {
     for (let i = 0; i < config.predefinedInputs.poolIds.length; i++) {
       const poolId = config.predefinedInputs.poolIds[i];
       const poolName = config.predefinedInputs.poolNames[i] || `Pool ${i + 1}`;
-      
-      console.log(`Processing ${poolName} with ID: ${poolId}`);
       
       try {
         // Call the function with the two inputs

@@ -24,6 +24,10 @@ export default function OptionsData() {
     globalBias: 0
   });
   
+  // Add cache state
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const CACHE_DURATION = 30000; // 30 seconds cache
+  
   // Protocol fees state
   const [protocolFees, setProtocolFees] = useState({
     fees24h: 0,
@@ -48,8 +52,15 @@ export default function OptionsData() {
   // Get unique chain names for filter
   const chainNames = [...new Set(marketsData.map(market => market.chainName || 'Unknown'))].sort();
 
-  // Fetch market data from Stryke API
-  const fetchMarketData = async () => {
+  // Fetch market data from Stryke API with caching
+  const fetchMarketData = async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Check if we should use cached data
+    if (!forceRefresh && now - lastFetchTime < CACHE_DURATION) {
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -64,9 +75,7 @@ export default function OptionsData() {
         { id: 81457, name: 'Blast' }
       ];
       
-      console.log(`Fetching data from ${chains.length} chains...`);
-      
-      // Fetch data from all chains
+      // Fetch data from all chains in parallel
       const chainResponses = await Promise.allSettled(
         chains.map(chain => 
           fetch(`https://api.stryke.xyz/v1.1/clamm/option-markets?chains=${chain.id}`)
@@ -82,75 +91,32 @@ export default function OptionsData() {
         const response = chainResponses[i];
         
         if (response.status === 'fulfilled' && response.value.ok) {
-          console.log(`API response status - ${chain.name}:`, response.value.status);
-          
           try {
-            // Parse response
             const data = await response.value.json();
-            
-            // DEBUG: Log a sample of the raw API response to check for protocolFees24h
-            console.log(`${chain.name} API response sample:`, JSON.stringify(data).substring(0, 500) + '...');
-            
-            // Extract markets from the response
             let markets = [];
             
             if (data && typeof data === 'object') {
-              // Try to find markets data in different possible locations
               if (data.markets && Array.isArray(data.markets)) {
-                console.log(`Found ${chain.name} markets array in data.markets`);
                 markets = data.markets;
               } else if (data.data && data.data.markets && Array.isArray(data.data.markets)) {
-                console.log(`Found ${chain.name} markets array in data.data.markets`);
                 markets = data.data.markets;
               } else if (Array.isArray(data)) {
-                console.log(`${chain.name} data itself is an array, using it as markets`);
                 markets = data;
               } else if (data.results && Array.isArray(data.results)) {
-                console.log(`Found ${chain.name} markets array in data.results`);
                 markets = data.results;
-              } else {
-                console.warn(`Could not find ${chain.name} markets array in the API response`);
-                markets = [];
               }
             }
             
-            // Filter out deprecated markets
-            const activeMarketsCount = markets.length;
-            markets = markets.filter(market => market.deprecated === false);
-            console.log(`Filtered out ${activeMarketsCount - markets.length} deprecated markets for ${chain.name}`);
+            // Filter out deprecated markets and add chain information
+            const activeMarkets = markets
+              .filter(market => market.deprecated === false)
+              .map(market => ({
+                ...market,
+                chainId: chain.id,
+                chainName: chain.name
+              }));
             
-            // Check if markets have protocolFees24h property before processing
-            if (markets.length > 0) {
-              const sampleMarket = markets[0];
-              console.log(`Sample market from ${chain.name} before processing:`, {
-                pairName: sampleMarket.pairName,
-                protocolFees24h: sampleMarket.protocolFees24h,
-                volume24h: sampleMarket.volume24h
-              });
-            }
-            
-            // Add chain information to each market
-            markets = markets.map(market => ({
-              ...market,
-              chainId: chain.id,
-              chainName: chain.name
-            }));
-            
-            // Verify protocolFees24h is preserved after processing
-            if (markets.length > 0) {
-              const sampleMarket = markets[0];
-              console.log(`Sample market from ${chain.name} after processing:`, {
-                pairName: sampleMarket.pairName,
-                protocolFees24h: sampleMarket.protocolFees24h,
-                volume24h: sampleMarket.volume24h
-              });
-            }
-            
-            console.log(`Found ${markets.length} markets for ${chain.name}`);
-            
-            // Add to all markets
-            allActiveMarkets = [...allActiveMarkets, ...markets];
-            
+            allActiveMarkets = [...allActiveMarkets, ...activeMarkets];
           } catch (parseError) {
             console.error(`Error parsing ${chain.name} response:`, parseError);
             failedChains.push(chain.name);
@@ -162,71 +128,38 @@ export default function OptionsData() {
         }
       }
       
-      console.log(`Combined into ${allActiveMarkets.length} total markets from ${chains.length - failedChains.length} chains`);
-      if (failedChains.length > 0) {
-        console.warn(`Failed to fetch data from these chains: ${failedChains.join(', ')}`);
-      }
-
-      if (allActiveMarkets.length === 0) {
-        throw new Error('No markets found in API responses');
-      }
-
-      // Check if protocolFees24h is preserved in the combined data
-      const marketsWithFees = allActiveMarkets.filter(market => market.protocolFees24h && parseFloat(market.protocolFees24h) > 0);
-      console.log(`Found ${marketsWithFees.length} markets with non-zero protocolFees24h`);
-      if (marketsWithFees.length > 0) {
-        console.log('Sample markets with fees:', marketsWithFees.slice(0, 3).map(m => ({
-          pairName: m.pairName,
-          chainName: m.chainName,
-          protocolFees24h: m.protocolFees24h
-        })));
-      }
-
-      // Set markets data
+      // Update cache time
+      setLastFetchTime(now);
+      
+      // Update markets data
       setMarketsData(allActiveMarkets);
-
-      // Calculate aggregated statistics
-      const openInterest = allActiveMarkets.reduce((sum, market) => sum + parseFloat(market.openInterest || 0), 0);
-      const volume24h = allActiveMarkets.reduce((sum, market) => sum + parseFloat(market.volume24h || 0), 0);
-      const totalLiquidity = allActiveMarkets.reduce((sum, market) => sum + parseFloat(market.totalLiquidity || 0), 0);
       
-      // Calculate positions
-      let longPositions = 0;
-      let shortPositions = 0;
-      
-      allActiveMarkets.forEach(market => {
-        if (market.longPositions) longPositions += parseFloat(market.longPositions);
-        if (market.shortPositions) shortPositions += parseFloat(market.shortPositions);
+      // Calculate aggregated stats
+      const stats = allActiveMarkets.reduce((acc, market) => {
+        acc.openInterest += parseFloat(market.openInterest || 0);
+        acc.volume24h += parseFloat(market.volume24h || 0);
+        acc.totalLiquidity += parseFloat(market.totalLiquidity || 0);
+        acc.longPositions += parseInt(market.longPositions || 0);
+        acc.shortPositions += parseInt(market.shortPositions || 0);
+        return acc;
+      }, {
+        openInterest: 0,
+        volume24h: 0,
+        totalLiquidity: 0,
+        longPositions: 0,
+        shortPositions: 0,
+        globalBias: 0
       });
       
       // Calculate global bias
-      const globalBias = longPositions > 0 ? (longPositions / (longPositions + shortPositions)) * 100 : 0;
-      
-      // Update stats
-      const stats = {
-        openInterest,
-        volume24h,
-        totalLiquidity,
-        longPositions,
-        shortPositions,
-        globalBias
-      };
+      stats.globalBias = stats.longPositions > 0 || stats.shortPositions > 0
+        ? ((stats.longPositions - stats.shortPositions) / (stats.longPositions + stats.shortPositions)) * 100
+        : 0;
       
       setAggregatedStats(stats);
-      setError(null);
       
-      // Fetch protocol fees for all chains
-      const feesByChain = await fetchProtocolFeesByChain(chains);
-      setProtocolFeesByChain(feesByChain);
-      
-      // Set total protocol fees
-      if (feesByChain.total) {
-        setProtocolFees({
-          fees24h: feesByChain.total.fees24h,
-          cumulativeFees: feesByChain.total.cumulativeFees,
-          isLoading: false,
-          error: null
-        });
+      if (failedChains.length > 0) {
+        console.warn(`Failed to fetch data from these chains: ${failedChains.join(', ')}`);
       }
       
     } catch (err) {
@@ -237,26 +170,53 @@ export default function OptionsData() {
     }
   };
   
-  // Handle sorting
-  const handleSort = (key) => {
-    let direction = 'desc';
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      await fetchMarketData();
+      // Define chains for protocol fees
+      const chains = [
+        { id: 42161, name: 'Arbitrum' },
+        { id: 146, name: 'Sonic' },
+        { id: 80094, name: 'Berachain' },
+        { id: 8453, name: 'Base' },
+        { id: 5000, name: 'Mantle' },
+        { id: 81457, name: 'Blast' }
+      ];
+      await fetchProtocolFeesByChain(chains);
+    };
     
-    if (sortConfig.key === key && sortConfig.direction === 'desc') {
-      direction = 'asc';
-    }
-    
-    setSortConfig({ key, direction });
-  };
+    fetchData();
+  }, []);
   
-  // Get sort icon based on current sort state
-  const getSortIcon = (key) => {
-    if (sortConfig.key !== key) {
-      return <ArrowUpDown className="h-4 w-4 ml-1" />;
-    }
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    setProtocolFees(prev => ({ ...prev, isLoading: true }));
     
-    return sortConfig.direction === 'asc' 
-      ? <ArrowUp className="h-4 w-4 ml-1" /> 
-      : <ArrowDown className="h-4 w-4 ml-1" />;
+    try {
+      // Define chains for protocol fees
+      const chains = [
+        { id: 42161, name: 'Arbitrum' },
+        { id: 146, name: 'Sonic' },
+        { id: 80094, name: 'Berachain' },
+        { id: 8453, name: 'Base' },
+        { id: 5000, name: 'Mantle' },
+        { id: 81457, name: 'Blast' }
+      ];
+      
+      // Fetch both market data and protocol fees in parallel
+      await Promise.all([
+        fetchMarketData(true),
+        fetchProtocolFeesByChain(chains)
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+      setProtocolFees(prev => ({ ...prev, isLoading: false }));
+    }
   };
   
   // Filter and sort data when dependencies change
@@ -296,19 +256,32 @@ export default function OptionsData() {
     setCurrentPage(page);
   };
   
-  // Fetch data on component mount
-  useEffect(() => {
-    fetchMarketData();
-  }, []);
-  
-  // Handle refresh button click
-  const handleRefresh = () => {
-    fetchMarketData();
-  };
-  
   // Handle chain filter change
   const handleChainFilterChange = (value) => {
     setChainFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+  
+  // Handle sorting
+  const handleSort = (key) => {
+    let direction = 'desc';
+    
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    
+    setSortConfig({ key, direction });
+  };
+  
+  // Get sort icon based on current sort state
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) {
+      return <ArrowUpDown className="h-4 w-4 ml-1" />;
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp className="h-4 w-4 ml-1" /> 
+      : <ArrowDown className="h-4 w-4 ml-1" />;
   };
   
   // Fetch protocol fees for all chains

@@ -9,6 +9,9 @@ import { callContractFunction, fetchHistoricalEpochData } from '../services/api'
 // Chart colors matching the shadcn dark theme
 const colors = ["#3b82f6", "#f472b6", "#f59e0b", "#10b981", "#c084fc"];
 
+// Cache duration in milliseconds (1 day)
+const CACHE_DURATION = 24 * 60 * 60 * 1000;
+
 export default function Dashboard() {
   const [currentEpoch, setCurrentEpoch] = useState("Loading...");
   const [totalReward, setTotalReward] = useState("Loading...");
@@ -19,6 +22,15 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [historicalData, setHistoricalData] = useState([]);
   const [chartData, setChartData] = useState([]);
+  
+  // Cache state
+  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const [cachedData, setCachedData] = useState({
+    currentEpoch: null,
+    totalReward: null,
+    previousEpochRewards: null,
+    historicalData: null
+  });
 
   // Function to convert historical data to chart format
   const transformDataForChart = (data) => {
@@ -48,8 +60,21 @@ export default function Dashboard() {
     });
   };
 
-  // Fetch dashboard data
-  const fetchDashboardData = async () => {
+  // Fetch dashboard data with caching
+  const fetchDashboardData = async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Check if we should use cached data
+    if (!forceRefresh && now - lastFetchTime < CACHE_DURATION && cachedData.currentEpoch) {
+      setCurrentEpoch(cachedData.currentEpoch);
+      setTotalReward(cachedData.totalReward);
+      setPreviousEpochRewards(cachedData.previousEpochRewards);
+      setHistoricalData(cachedData.historicalData);
+      setChartData(transformDataForChart(cachedData.historicalData));
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -81,13 +106,23 @@ export default function Dashboard() {
         // Format the reward value
         const bigNumber = BigInt(rewardResponse.result);
         const formatted = Number(bigNumber) / 1e18;
-        setTotalReward(formatted.toLocaleString(undefined, { maximumFractionDigits: 2 }));
+        const formattedReward = formatted.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        setTotalReward(formattedReward);
       }
 
       // Fetch historical data for chart
       const histData = await fetchHistoricalEpochData();
       setHistoricalData(histData);
       setChartData(transformDataForChart(histData));
+
+      // Update cache
+      setCachedData({
+        currentEpoch: epochResponse.success ? epochResponse.result : null,
+        totalReward: rewardResponse.success ? rewardResponse.result : null,
+        previousEpochRewards: previousEpochRewards,
+        historicalData: histData
+      });
+      setLastFetchTime(now);
 
       setIsLoading(false);
     } catch (error) {
@@ -100,77 +135,78 @@ export default function Dashboard() {
   // Initialize epoch countdown
   const initEpochCountdown = async () => {
     try {
-      const [epochLengthResult, genesisResult, currentEpochResult] = await Promise.all([
+      // Get epoch length and genesis time
+      const [epochLengthResponse, genesisResponse] = await Promise.all([
         callContractFunction('EPOCH_LENGTH'),
-        callContractFunction('genesis'),
-        callContractFunction('epoch')
+        callContractFunction('genesis')
       ]);
 
-      if (epochLengthResult.success && genesisResult.success && currentEpochResult.success) {
-        const epochLength = BigInt(epochLengthResult.result);
-        const genesis = BigInt(genesisResult.result);
-        const currentEpoch = BigInt(currentEpochResult.result);
-
-        // Calculate current epoch end time
-        const currentEpochEndTime = Number(genesis + ((currentEpoch + 1n) * epochLength)) * 1000;
-        updateCountdown(currentEpochEndTime, Number(epochLength) * 1000);
-        
-        // Update countdown every second
-        const interval = setInterval(() => {
-          updateCountdown(currentEpochEndTime, Number(epochLength) * 1000);
-        }, 1000);
-        
-        return interval; // Return the interval ID instead of a function
+      if (!epochLengthResponse.success || !genesisResponse.success) {
+        throw new Error('Failed to fetch epoch configuration');
       }
+
+      const epochLength = parseInt(epochLengthResponse.result);
+      const genesisTime = parseInt(genesisResponse.result);
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      // Calculate current epoch progress
+      const timeSinceGenesis = currentTime - genesisTime;
+      const currentEpochNumber = Math.floor(timeSinceGenesis / epochLength);
+      const epochStartTime = genesisTime + (currentEpochNumber * epochLength);
+      const timeRemaining = (epochStartTime + epochLength) - currentTime;
+
+      // Update countdown display
+      const days = Math.floor(timeRemaining / (24 * 60 * 60));
+      const hours = Math.floor((timeRemaining % (24 * 60 * 60)) / (60 * 60));
+      const minutes = Math.floor((timeRemaining % (60 * 60)) / 60);
+      const seconds = timeRemaining % 60;
+
+      setCountdownDisplay(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      setProgress((timeRemaining / epochLength) * 100);
+
+      // Update countdown every second
+      const intervalId = setInterval(() => {
+        const newTime = Math.floor(Date.now() / 1000);
+        const newTimeSinceGenesis = newTime - genesisTime;
+        const newTimeRemaining = (epochStartTime + epochLength) - newTime;
+
+        if (newTimeRemaining <= 0) {
+          clearInterval(intervalId);
+          setCountdownDisplay("Epoch ended");
+          setProgress(0);
+          return;
+        }
+
+        const newDays = Math.floor(newTimeRemaining / (24 * 60 * 60));
+        const newHours = Math.floor((newTimeRemaining % (24 * 60 * 60)) / (60 * 60));
+        const newMinutes = Math.floor((newTimeRemaining % (60 * 60)) / 60);
+        const newSeconds = newTimeRemaining % 60;
+
+        setCountdownDisplay(`${newDays}d ${newHours}h ${newMinutes}m ${newSeconds}s`);
+        setProgress((newTimeRemaining / epochLength) * 100);
+      }, 1000);
+
+      return intervalId;
     } catch (error) {
       console.error("Error initializing countdown:", error);
-      setCountdownDisplay("Error loading countdown");
+      setCountdownDisplay("Error calculating countdown");
+      setProgress(0);
+      return null;
     }
-    
-    return null; // Return null if there's an error or if the if condition is not met
   };
 
-  // Update countdown display and progress
-  const updateCountdown = (endTime, epochLengthMs) => {
-    const now = Date.now();
-    const timeRemaining = endTime - now;
-    
-    if (timeRemaining <= 0) {
-      setCountdownDisplay("Epoch has ended! Refreshing...");
-      setProgress(100);
-      setTimeout(fetchDashboardData, 3000);
-      return;
-    }
-    
-    // Calculate time components
-    const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
-    
-    // Format countdown
-    setCountdownDisplay(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-    
-    // Update progress bar
-    const startTime = endTime - epochLengthMs;
-    const elapsed = now - startTime;
-    const percentage = Math.min(100, Math.max(0, (elapsed / epochLengthMs) * 100));
-    setProgress(percentage);
-  };
-
+  // Fetch data on component mount
   useEffect(() => {
     fetchDashboardData();
-    
-    // Fix the async function issue by creating a separate async function inside useEffect
-    let intervalId = null;
-    
-    const setupCountdown = async () => {
-      intervalId = await initEpochCountdown();
-    };
-    
-    setupCountdown();
-    
-    // Return a proper cleanup function
+  }, []);
+
+  // Initialize countdown on component mount
+  useEffect(() => {
+    let intervalId;
+    initEpochCountdown().then(id => {
+      intervalId = id;
+    });
+
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
