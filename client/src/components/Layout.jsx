@@ -21,6 +21,7 @@ export default function Layout() {
             <TabsTrigger value="options">Options chain</TabsTrigger>
             <TabsTrigger value="dashboard">Epoch rewards</TabsTrigger>
             <TabsTrigger value="rewards">Epoch lookup</TabsTrigger>
+            {/* Remove this for now */}
             {/* <TabsTrigger value="contract">Contract interface</TabsTrigger> */}
 
           </TabsList>

@@ -8,6 +8,7 @@ import { Label } from "./ui/label";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { formatCurrency, formatNumber, formatPercentage } from "../utils/formatters";
 import ProtocolFeesChart from "./ui/protocol-fees-chart";
+import LiquidityPieChart from "./ui/liquidity-pie-chart";
 
 export default function OptionsData() {
   const [isLoading, setIsLoading] = useState(true);
@@ -15,7 +16,6 @@ export default function OptionsData() {
   const [marketsData, setMarketsData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [aggregatedStats, setAggregatedStats] = useState({
-    totalNotional: 0,
     openInterest: 0,
     volume24h: 0,
     totalLiquidity: 0,
@@ -40,6 +40,10 @@ export default function OptionsData() {
     key: 'totalLiquidity',
     direction: 'desc'
   });
+  
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
   
   // Get unique chain names for filter
   const chainNames = [...new Set(marketsData.map(market => market.chainName || 'Unknown'))].sort();
@@ -182,7 +186,6 @@ export default function OptionsData() {
       setMarketsData(allActiveMarkets);
 
       // Calculate aggregated statistics
-      const totalNotional = allActiveMarkets.reduce((sum, market) => sum + parseFloat(market.notionalVolume || 0), 0);
       const openInterest = allActiveMarkets.reduce((sum, market) => sum + parseFloat(market.openInterest || 0), 0);
       const volume24h = allActiveMarkets.reduce((sum, market) => sum + parseFloat(market.volume24h || 0), 0);
       const totalLiquidity = allActiveMarkets.reduce((sum, market) => sum + parseFloat(market.totalLiquidity || 0), 0);
@@ -201,7 +204,6 @@ export default function OptionsData() {
       
       // Update stats
       const stats = {
-        totalNotional,
         openInterest,
         volume24h,
         totalLiquidity,
@@ -279,10 +281,20 @@ export default function OptionsData() {
         }
       });
       
-      // Limit to top 20 markets
-      setFilteredData(filtered.slice(0, 20));
+      setFilteredData(filtered);
     }
   }, [marketsData, chainFilter, sortConfig]);
+  
+  // Calculate pagination values
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPageData = filteredData.slice(startIndex, endIndex);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
   
   // Fetch data on component mount
   useEffect(() => {
@@ -588,18 +600,7 @@ export default function OptionsData() {
   return (
     <div className="space-y-8">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Notional</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(aggregatedStats.totalNotional)}</div>
-            <p className="text-xs text-muted-foreground">Total value of all options contracts</p>
-          </CardContent>
-        </Card>
-        
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Open Interest</CardTitle>
@@ -633,94 +634,123 @@ export default function OptionsData() {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Options chain Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Options chain</CardTitle>
-              <CardDescription>
-                Key metrics for all active options markets
-              </CardDescription>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+        {/* Options chain Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Options chain</CardTitle>
+                <CardDescription>
+                  Key metrics for all active options markets
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
             </div>
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Filter Controls */}
-          <div className="mb-4 flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="chain-filter">Filter by Chain:</Label>
-              <Select value={chainFilter} onValueChange={handleChainFilterChange}>
-                <SelectTrigger id="chain-filter" className="w-[180px]">
-                  <SelectValue placeholder="Select Chain" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Chains</SelectItem>
-                  {chainNames.map(chain => (
-                    <SelectItem key={chain} value={chain}>{chain}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          </CardHeader>
+          <CardContent>
+            {/* Filter Controls */}
+            <div className="mb-4 flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="chain-filter">Filter by Chain:</Label>
+                <Select value={chainFilter} onValueChange={handleChainFilterChange}>
+                  <SelectTrigger id="chain-filter" className="w-[180px]">
+                    <SelectValue placeholder="Select Chain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Chains</SelectItem>
+                    {chainNames.map(chain => (
+                      <SelectItem key={chain} value={chain}>{chain}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-12 text-destructive">{error}</div>
-          ) : filteredData.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No markets data available</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Market</TableHead>
-                    <TableHead>Chain</TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort('openInterest')}>
-                      <div className="flex items-center">
-                        Open Interest
-                        {getSortIcon('openInterest')}
-                      </div>
-                    </TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort('totalLiquidity')}>
-                      <div className="flex items-center">
-                        Total Liquidity
-                        {getSortIcon('totalLiquidity')}
-                      </div>
-                    </TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort('volume24h')}>
-                      <div className="flex items-center">
-                        24h Volume
-                        {getSortIcon('volume24h')}
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.map((market, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{market.pairName}</TableCell>
-                      <TableCell>{market.chainName}</TableCell>
-                      <TableCell>{formatCurrency(market.openInterest)}</TableCell>
-                      <TableCell>{formatCurrency(market.totalLiquidity)}</TableCell>
-                      <TableCell>{formatCurrency(market.volume24h)}</TableCell>
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : error ? (
+              <div className="text-center py-12 text-destructive">{error}</div>
+            ) : filteredData.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No markets data available</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Market</TableHead>
+                      <TableHead>Chain</TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort('openInterest')}>
+                        <div className="flex items-center">
+                          Open Interest
+                          {getSortIcon('openInterest')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort('totalLiquidity')}>
+                        <div className="flex items-center">
+                          Total Liquidity
+                          {getSortIcon('totalLiquidity')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => handleSort('volume24h')}>
+                        <div className="flex items-center">
+                          24h Volume
+                          {getSortIcon('volume24h')}
+                        </div>
+                      </TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
+                  </TableHeader>
+                  <TableBody>
+                    {currentPageData.map((market, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{market.pairName}</TableCell>
+                        <TableCell>{market.chainName}</TableCell>
+                        <TableCell>{formatCurrency(market.openInterest)}</TableCell>
+                        <TableCell>{formatCurrency(market.totalLiquidity)}</TableCell>
+                        <TableCell>{formatCurrency(market.volume24h)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      {'<'}
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      {'>'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Liquidity Distribution Chart */}
+        <LiquidityPieChart marketsData={marketsData} />
+      </div>
       {/* Protocol Fees Section */}
       <div>
         <h3 className="text-lg font-medium mb-4">Protocol Fees</h3>
@@ -813,7 +843,7 @@ export default function OptionsData() {
                   <TableBody>
                     {Object.values(protocolFeesByChain)
                       .filter(chain => chain.chainId !== 'total')
-                      .sort((a, b) => b.fees24h - a.fees24h)
+                      .sort((a, b) => b.cumulativeFees - a.cumulativeFees)
                       .map((chain, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">{chain.chainName}</TableCell>
